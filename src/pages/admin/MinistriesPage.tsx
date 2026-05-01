@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { Heart, Plus, Search, Save, Trash2, ShieldCheck, UserPlus, Briefcase } from 'lucide-react';
+import { Heart, Plus, Search, Trash2, ShieldCheck, UserPlus, Briefcase, UserMinus } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useDataStore } from '@/lib/data-store';
-import type { Ministry, MinistryMember } from '@shared/types';
+import type { Ministry, MinistryMember, Member, Position } from '@shared/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent, CardFooter, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 const ministrySchema = z.object({
   name: z.string().min(3, "Nome muito curto"),
@@ -24,7 +26,8 @@ const ministrySchema = z.object({
 export function MinistriesPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [managingMinistry, setManagingMinistry] = useState<Ministry | null>(null);
-  const [memberSearch, setMemberSearch] = useState('');
+  const [assignMemberId, setAssignMemberId] = useState<string>("");
+  const [assignPositionId, setAssignPositionId] = useState<string>("none");
   const ministries = useDataStore(s => s.ministries);
   const addMinistryAction = useDataStore(s => s.addMinistry);
   const deleteMinistryAction = useDataStore(s => s.deleteMinistry);
@@ -35,7 +38,7 @@ export function MinistriesPage() {
   const unlinkMemberAction = useDataStore(s => s.unlinkMember);
   const updateMinistryMemberAction = useDataStore(s => s.updateMinistryMember);
   const allPositions = useDataStore(s => s.positions);
-  const activeMinistryPositions = useMemo(() => 
+  const activeMinistryPositions = useMemo(() =>
     allPositions.filter(p => p.active && p.scope === 'ministry'),
   [allPositions]);
   const form = useForm<z.infer<typeof ministrySchema>>({
@@ -59,22 +62,60 @@ export function MinistriesPage() {
       toast.error('Erro ao criar ministério');
     }
   };
-  const toggleMembership = (memberId: string, ministryId: string) => {
-    const existing = ministryMembers.find(mm => mm.memberId === memberId && mm.ministryId === ministryId);
-    if (existing) {
-      unlinkMemberAction(existing.id);
-      toast.info('Membro removido do ministério');
-    } else {
-      linkMemberAction({ memberId, ministryId, role: 'member' });
-      toast.success('Membro adicionado ao ministério');
+  const currentTeam = useMemo(() => {
+    if (!managingMinistry) return [];
+    return ministryMembers
+      .filter(mm => mm.ministryId === managingMinistry.id)
+      .map(mm => ({
+        ...mm,
+        member: members.find(m => m.id === mm.memberId),
+        position: allPositions.find(p => p.id === mm.positionId)
+      }))
+      .filter(item => item.member)
+      .sort((a, b) => {
+        if (a.role === 'leader' && b.role !== 'leader') return -1;
+        if (a.role !== 'leader' && b.role === 'leader') return 1;
+        return (a.member?.fullName || '').localeCompare(b.member?.fullName || '');
+      });
+  }, [managingMinistry, ministryMembers, members, allPositions]);
+  const membersNotJoined = useMemo(() => {
+    if (!managingMinistry) return [];
+    const joinedIds = new Set(currentTeam.map(t => t.memberId));
+    return members.filter(m => !joinedIds.has(m.id));
+  }, [members, currentTeam, managingMinistry]);
+  const handleAssignMember = () => {
+    if (!managingMinistry || !assignMemberId) return;
+    try {
+      linkMemberAction({
+        memberId: assignMemberId,
+        ministryId: managingMinistry.id,
+        role: 'member',
+        positionId: assignPositionId === 'none' ? undefined : assignPositionId
+      });
+      setAssignMemberId("");
+      setAssignPositionId("none");
+      toast.success("Membro vinculado com sucesso");
+    } catch (e) {
+      toast.error("Erro ao vincular membro");
     }
   };
-  const updateMemberPos = (mmId: string, positionId: string) => {
-    updateMinistryMemberAction(mmId, { positionId: positionId === 'none' ? undefined : positionId });
-    toast.success('Função atualizada');
-  };
-  const getMinistryMemberCount = (minId: string) => {
-    return ministryMembers.filter(mm => mm.ministryId === minId).length;
+  const toggleLeader = (mmId: string, memberId: string, isCurrentlyLeader: boolean) => {
+    if (!managingMinistry) return;
+    // If promoting someone to leader, demote previous leader
+    if (!isCurrentlyLeader) {
+      const oldLeaderMM = currentTeam.find(t => t.role === 'leader');
+      if (oldLeaderMM) {
+        updateMinistryMemberAction(oldLeaderMM.id, { role: 'member' });
+      }
+      updateMinistryAction(managingMinistry.id, { leaderId: memberId });
+      updateMinistryMemberAction(mmId, { role: 'leader' });
+      toast.success("Novo líder definido");
+    } else {
+      // Demoting current leader
+      updateMinistryAction(managingMinistry.id, { leaderId: undefined });
+      updateMinistryMemberAction(mmId, { role: 'member' });
+      toast.success("Liderança removida");
+    }
   };
   const getLeader = (leaderId?: string) => {
     return members.find(m => m.id === leaderId);
@@ -129,7 +170,7 @@ export function MinistriesPage() {
           </div>
         ) : ministries.map((min) => {
           const leader = getLeader(min.leaderId);
-          const count = getMinistryMemberCount(min.id);
+          const count = ministryMembers.filter(mm => mm.ministryId === min.id).length;
           return (
             <Card key={min.id} className="hover:shadow-md transition-all group flex flex-col h-full border-slate-200">
               <CardHeader className="pb-3">
@@ -183,93 +224,152 @@ export function MinistriesPage() {
         })}
       </div>
       <Sheet open={!!managingMinistry} onOpenChange={() => setManagingMinistry(null)}>
-        <SheetContent className="sm:max-w-md">
-          <SheetHeader>
+        <SheetContent className="sm:max-w-md flex flex-col p-0">
+          <SheetHeader className="p-6 pb-2">
             <SheetTitle>Equipe: {managingMinistry?.name}</SheetTitle>
-            <SheetDescription>Vincule membros e atribua funções específicas para este grupo.</SheetDescription>
+            <SheetDescription>Organize o corpo de voluntários deste ministério.</SheetDescription>
           </SheetHeader>
-          <div className="mt-6 space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Pesquisar membros..."
-                className="pl-9"
-                value={memberSearch}
-                onChange={(e) => setMemberSearch(e.target.value)}
-              />
-            </div>
-            <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-2">
-              {members
-                .filter(m => m.fullName.toLowerCase().includes(memberSearch.toLowerCase()))
-                .map(m => {
-                  const mm = ministryMembers.find(item => item.memberId === m.id && item.ministryId === managingMinistry?.id);
-                  const isMember = !!mm;
-                  const isLeader = mm?.role === 'leader';
-                  const currentPos = allPositions.find(p => p.id === mm?.positionId);
-                  return (
-                    <div key={m.id} className="flex flex-col p-3 rounded-lg border hover:bg-slate-50 transition-colors gap-3">
+          <ScrollArea className="flex-1 px-6">
+            <div className="space-y-8 py-4">
+              {/* Assignment Form */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-bold text-primary uppercase tracking-wider">
+                  <UserPlus className="h-4 w-4" /> Vincular Novo Membro
+                </div>
+                <div className="space-y-3 p-4 rounded-xl border bg-slate-50/50">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground ml-1">Membro</label>
+                    <Select value={assignMemberId} onValueChange={setAssignMemberId}>
+                      <SelectTrigger className="bg-white">
+                        <SelectValue placeholder="Selecione um membro..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {membersNotJoined.length === 0 ? (
+                          <div className="p-2 text-xs text-center text-muted-foreground">Todos os membros vinculados</div>
+                        ) : (
+                          membersNotJoined.map(m => (
+                            <SelectItem key={m.id} value={m.id}>{m.fullName}</SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground ml-1">Função (Opcional)</label>
+                    <Select value={assignPositionId} onValueChange={setAssignPositionId}>
+                      <SelectTrigger className="bg-white">
+                        <SelectValue placeholder="Sem função específica" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhuma</SelectItem>
+                        {activeMinistryPositions.map(p => (
+                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button 
+                    className="w-full btn-gradient" 
+                    disabled={!assignMemberId}
+                    onClick={handleAssignMember}
+                  >
+                    Vincular ao Grupo
+                  </Button>
+                </div>
+              </div>
+              <Separator />
+              {/* Team List */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm font-bold text-primary uppercase tracking-wider">
+                    <Briefcase className="h-4 w-4" /> Membros Ativos
+                  </div>
+                  <Badge variant="secondary" className="text-[10px]">{currentTeam.length}</Badge>
+                </div>
+                <div className="space-y-3">
+                  {currentTeam.length === 0 ? (
+                    <div className="py-10 text-center text-sm text-muted-foreground italic border-2 border-dashed rounded-xl">
+                      Equipe vazia. Vincule membros acima.
+                    </div>
+                  ) : currentTeam.map((item) => (
+                    <div key={item.id} className="flex flex-col p-3 rounded-lg border bg-white shadow-sm hover:shadow-md transition-all gap-3 border-slate-200">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={m.photoUrl} alt={m.fullName} />
-                            <AvatarFallback>{m.fullName.substring(0,2).toUpperCase()}</AvatarFallback>
+                          <Avatar className="h-10 w-10 border">
+                            <AvatarImage src={item.member?.photoUrl} />
+                            <AvatarFallback>{item.member?.fullName.substring(0,2).toUpperCase()}</AvatarFallback>
                           </Avatar>
                           <div className="flex flex-col">
-                            <span className="text-sm font-medium">{m.fullName}</span>
-                            <div className="flex gap-1 items-center">
-                              <span className="text-[10px] text-muted-foreground">{m.role}</span>
-                              {isLeader && <ShieldCheck className="h-3 w-3 text-primary" />}
-                              {currentPos && <Badge variant="outline" className="text-[9px] py-0">{currentPos.name}</Badge>}
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-bold">{item.member?.fullName}</span>
+                              {item.role === 'leader' && (
+                                <Badge className="bg-primary text-[9px] h-4 px-1 uppercase leading-none">Líder</Badge>
+                              )}
+                            </div>
+                            <div className="flex gap-1.5 items-center mt-0.5">
+                              {item.position ? (
+                                <Badge variant="outline" className="text-[9px] py-0 border-primary/20 text-primary">
+                                  {item.position.name}
+                                </Badge>
+                              ) : (
+                                <span className="text-[10px] text-muted-foreground">Membro comum</span>
+                              )}
                             </div>
                           </div>
                         </div>
                         <Button
-                          size="sm"
-                          variant={isMember ? "outline" : "default"}
-                          className={`h-8 w-24 ${isMember ? "text-destructive hover:bg-destructive/10" : "bg-primary"}`}
-                          onClick={() => managingMinistry && toggleMembership(m.id, managingMinistry.id)}
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => {
+                            if (confirm('Remover este membro do ministério?')) {
+                              unlinkMemberAction(item.id);
+                              if (item.role === 'leader' && managingMinistry) {
+                                updateMinistryAction(managingMinistry.id, { leaderId: undefined });
+                              }
+                              toast.info('Membro removido');
+                            }
+                          }}
                         >
-                          {isMember ? 'Remover' : 'Adicionar'}
+                          <UserMinus className="h-4 w-4" />
                         </Button>
                       </div>
-                      {isMember && (
-                        <div className="grid grid-cols-2 gap-2 pt-2 border-t">
-                          <div className="flex items-center gap-2">
-                             <Button
-                              size="sm"
-                              variant="ghost"
-                              className={`h-7 px-2 text-[10px] ${isLeader ? 'text-primary' : 'text-slate-400'}`}
-                              onClick={() => {
-                                updateMinistryAction(managingMinistry!.id, { leaderId: isLeader ? undefined : m.id });
-                                updateMinistryMemberAction(mm.id, { role: isLeader ? 'member' : 'leader' });
-                                toast.success(isLeader ? 'Liderança removida' : 'Liderança atribuída');
-                              }}
-                            >
-                               <ShieldCheck className="h-3 w-3 mr-1" /> Líder
-                            </Button>
-                          </div>
-                          <Select 
-                            value={mm.positionId || 'none'} 
-                            onValueChange={(val) => updateMemberPos(mm.id, val)}
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-50 gap-2">
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant={item.role === 'leader' ? "default" : "outline"}
+                            className={`h-7 px-3 text-[10px] ${item.role === 'leader' ? 'bg-primary' : ''}`}
+                            onClick={() => toggleLeader(item.id, item.memberId, item.role === 'leader')}
                           >
-                            <SelectTrigger className="h-7 text-[10px] bg-white">
-                              <Briefcase className="h-3 w-3 mr-1" />
-                              <SelectValue placeholder="Função" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">Sem função específica</SelectItem>
-                              {activeMinistryPositions.map(p => (
-                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            <ShieldCheck className="h-3.5 w-3.5 mr-1.5" /> 
+                            {item.role === 'leader' ? 'Liderança Ativa' : 'Tornar Líder'}
+                          </Button>
                         </div>
-                      )}
+                        <Select
+                          value={item.positionId || 'none'}
+                          onValueChange={(val) => {
+                            updateMinistryMemberAction(item.id, { positionId: val === 'none' ? undefined : val });
+                            toast.success('Função atualizada');
+                          }}
+                        >
+                          <SelectTrigger className="h-7 text-[10px] w-[140px] bg-slate-50">
+                            <SelectValue placeholder="Trocar Função" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Sem função</SelectItem>
+                            {activeMinistryPositions.map(p => (
+                              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+          </ScrollArea>
         </SheetContent>
       </Sheet>
     </div>
