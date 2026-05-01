@@ -31,6 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthStore } from "@/lib/auth-store";
 import { toast } from "sonner";
 export function AppSidebar(): JSX.Element {
@@ -109,7 +110,7 @@ export function AppSidebar(): JSX.Element {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton className="h-12 w-full justify-start gap-3 p-2 hover:bg-accent hover:text-accent-foreground">
               <Avatar className="h-8 w-8 shrink-0">
-                <AvatarFallback>{user?.name.substring(0,2).toUpperCase()}</AvatarFallback>
+                <AvatarFallback>{user?.name?.substring(0, 2).toUpperCase() || "CF"}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col text-left group-data-[collapsible=icon]:hidden overflow-hidden flex-1">
                 <span className="text-sm font-medium truncate text-foreground">{user?.name}</span>
