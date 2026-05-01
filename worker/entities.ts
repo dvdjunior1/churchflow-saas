@@ -11,7 +11,9 @@ export class MemberEntity extends IndexedEntity<Member> {
     photoUrl: "",
     birthDate: "",
     role: "Membro",
-    joinedAt: new Date().toISOString()
+    joinedAt: new Date().toISOString(),
+    memberStatus: "ativo",
+    showBirthdayPublic: false
   };
   static seedData: Member[] = [
     {
@@ -23,7 +25,8 @@ export class MemberEntity extends IndexedEntity<Member> {
       birthDate: "1985-05-15",
       baptismDate: "2010-10-20",
       role: "Pastor",
-      joinedAt: "2010-01-01T10:00:00Z"
+      joinedAt: "2010-01-01T10:00:00Z",
+      memberStatus: "ativo"
     },
     {
       id: "m2",
@@ -33,7 +36,8 @@ export class MemberEntity extends IndexedEntity<Member> {
       photoUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maria",
       birthDate: "1992-08-22",
       role: "Líder de Louvor",
-      joinedAt: "2015-06-12T10:00:00Z"
+      joinedAt: "2015-06-12T10:00:00Z",
+      memberStatus: "ativo"
     }
   ];
 }

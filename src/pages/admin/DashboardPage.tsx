@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Heart, ArrowUpRight, Calendar, Clock, MapPin, FileText, Banknote } from 'lucide-react';
+import { Users, Heart, ArrowUpRight, Calendar, Clock, MapPin, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useDataStore } from '@/lib/data-store';
 import {
   BarChart,
@@ -23,7 +24,6 @@ export function DashboardPage() {
     .filter(e => new Date(e.date) >= new Date())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 3);
-  // Growth Chart Static Logic / Derived from local
   const growthData = [
     { month: 'Jan', count: 120 }, { month: 'Fev', count: 135 }, { month: 'Mar', count: 150 },
     { month: 'Abr', count: 162 }, { month: 'Mai', count: 180 }, { month: 'Jun', count: totalMembers }

@@ -77,7 +77,7 @@ const container = document.getElementById('root')!;
 if (!window.__reactRoot) {
   window.__reactRoot = createRoot(container);
 }
-function App() {
+export function App() {
   const seedIfEmpty = useDataStore(s => s.seedIfEmpty);
   useEffect(() => {
     seedIfEmpty();

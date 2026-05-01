@@ -20,6 +20,21 @@ export interface Member {
   baptismDate?: string; // ISO
   role: string;
   joinedAt: string; // ISO
+  // Evolved Fields
+  whatsapp?: string;
+  alternatePhone?: string;
+  gender?: 'M' | 'F' | 'O';
+  maritalStatus?: 'solteiro' | 'casado' | 'divorciado' | 'viuvo';
+  zipCode?: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  memberStatus?: 'ativo' | 'inativo' | 'visitante' | 'transferido';
+  notes?: string;
+  showBirthdayPublic?: boolean;
 }
 export interface Ministry {
   id: string;
@@ -50,7 +65,7 @@ export interface FinancialRecord {
   date: string; // ISO
   type: FinanceType;
   category: string;
-  description: string;
+  description?: string;
 }
 export interface FinancialStats {
   totalMonth: number;

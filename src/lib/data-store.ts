@@ -9,30 +9,24 @@ interface DataState {
   financialRecords: FinancialRecord[];
   events: ChurchEvent[];
   lastUpdated: string;
-  // Members
   setMembers: (members: Member[]) => void;
-  addMember: (member: Omit<Member, 'id' | 'joinedAt'>) => Member;
+  addMember: (member: Partial<Member>) => Member;
   updateMember: (id: string, updates: Partial<Member>) => void;
   deleteMember: (id: string) => void;
-  // Ministries
   setMinistries: (ministries: Ministry[]) => void;
   addMinistry: (ministry: Omit<Ministry, 'id'>) => Ministry;
   updateMinistry: (id: string, updates: Partial<Ministry>) => void;
   deleteMinistry: (id: string) => void;
-  // Ministry Members
   setMinistryMembers: (items: MinistryMember[]) => void;
   linkMember: (item: Omit<MinistryMember, 'id'>) => MinistryMember;
   unlinkMember: (id: string) => void;
-  // Finances
   setFinancialRecords: (records: FinancialRecord[]) => void;
   addFinancialRecord: (record: Omit<FinancialRecord, 'id'>) => FinancialRecord;
   deleteFinancialRecord: (id: string) => void;
-  // Events
   setEvents: (events: ChurchEvent[]) => void;
   addEvent: (event: Omit<ChurchEvent, 'id'>) => ChurchEvent;
   updateEvent: (id: string, updates: Partial<ChurchEvent>) => void;
   deleteEvent: (id: string) => void;
-  // Seeding
   seedIfEmpty: () => void;
 }
 export const useDataStore = create<DataState>()(
@@ -47,10 +41,18 @@ export const useDataStore = create<DataState>()(
       setMembers: (members) => set({ members, lastUpdated: new Date().toISOString() }),
       addMember: (data) => {
         const member: Member = {
+          fullName: "",
+          email: "",
+          phone: "",
+          photoUrl: "",
+          birthDate: "",
+          role: "Membro",
+          memberStatus: "ativo",
+          showBirthdayPublic: false,
           ...data,
           id: uuidv4(),
           joinedAt: new Date().toISOString(),
-        };
+        } as Member;
         set((state) => ({ members: [...state.members, member], lastUpdated: new Date().toISOString() }));
         return member;
       },
@@ -129,7 +131,10 @@ export const useDataStore = create<DataState>()(
             birthDate: "1985-05-15",
             baptismDate: "2010-10-20",
             role: "Pastor",
-            joinedAt: new Date().toISOString()
+            joinedAt: new Date().toISOString(),
+            memberStatus: "ativo",
+            city: "São Paulo",
+            state: "SP"
           },
           {
             id: m2Id,
@@ -139,7 +144,10 @@ export const useDataStore = create<DataState>()(
             photoUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maria",
             birthDate: "1992-08-22",
             role: "Líder de Louvor",
-            joinedAt: new Date().toISOString()
+            joinedAt: new Date().toISOString(),
+            memberStatus: "ativo",
+            city: "Rio de Janeiro",
+            state: "RJ"
           }
         ];
         const seedMinistries: Ministry[] = [
