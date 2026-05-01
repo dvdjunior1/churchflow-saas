@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { Calendar, Plus, MapPin, Clock, Search, Trash2 } from 'lucide-react';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Calendar, Plus, MapPin, Clock, Search, Filter, Loader2, MoreVertical, Trash2 } from 'lucide-react';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { api } from '@/lib/api-client';
 import { useDataStore } from '@/lib/data-store';
+import type { ChurchEvent } from '@shared/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent, CardFooter, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -21,14 +24,23 @@ const eventSchema = z.object({
   location: z.string().min(3, "Local obrigatório"),
   category: z.enum(['culto', 'ensaio', 'reuniao', 'social']),
 });
-type FormValues = z.infer<typeof eventSchema>;
 export function EventsPage() {
+  const queryClient = useQueryClient();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [search, setSearch] = useState('');
   const events = useDataStore(s => s.events);
-  const addEvent = useDataStore(s => s.addEvent);
-  const deleteEvent = useDataStore(s => s.deleteEvent);
-  const form = useForm<FormValues>({
+  const setEvents = useDataStore(s => s.setEvents);
+  const addEventAction = useDataStore(s => s.addEvent);
+  const deleteEventAction = useDataStore(s => s.deleteEvent);
+  const { isLoading } = useQuery<{ items: ChurchEvent[] }>({
+    queryKey: ['events'],
+    queryFn: async () => {
+      const data = await api<{ items: ChurchEvent[] }>('/api/events');
+      setEvents(data.items);
+      return data;
+    },
+  });
+  const form = useForm<z.infer<typeof eventSchema>>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
       title: '',
@@ -39,16 +51,23 @@ export function EventsPage() {
       category: 'culto',
     },
   });
-  const onSubmit: SubmitHandler<FormValues> = (values) => {
-    try {
-      addEvent(values);
+  const addMutation = useMutation({
+    mutationFn: (data: z.infer<typeof eventSchema>) => 
+      api<ChurchEvent>('/api/events', { method: 'POST', body: JSON.stringify(data) }),
+    onSuccess: (newEvent) => {
+      addEventAction(newEvent);
       setIsAddOpen(false);
       form.reset();
-      toast.success('Evento agendado com sucesso!');
-    } catch (e) {
-      toast.error('Erro ao agendar evento');
+      toast.success('Evento agendado!');
     }
-  };
+  });
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api(`/api/events/${id}`, { method: 'DELETE' }),
+    onSuccess: (_, id) => {
+      deleteEventAction(id);
+      toast.success('Evento removido');
+    }
+  });
   const filteredEvents = events.filter(e =>
     e.title.toLowerCase().includes(search.toLowerCase()) ||
     e.location.toLowerCase().includes(search.toLowerCase())
@@ -67,7 +86,7 @@ export function EventsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Agenda & Eventos</h1>
-          <p className="text-muted-foreground">Calendário processado localmente para resposta instantânea.</p>
+          <p className="text-muted-foreground">Gerencie o calendário de atividades da igreja.</p>
         </div>
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger asChild>
@@ -77,24 +96,40 @@ export function EventsPage() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Agendar Atividade</DialogTitle>
-              <DialogDescription>Os dados serão salvos no seu navegador.</DialogDescription>
+              <DialogTitle>Agendar Evento</DialogTitle>
+              <DialogDescription>Preencha as informações da atividade.</DialogDescription>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit((v) => addMutation.mutate(v))} className="space-y-4">
                 <FormField control={form.control} name="title" render={({ field }) => (
-                  <FormItem><FormLabel>Título</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem>
+                    <FormLabel>Título</FormLabel>
+                    <FormControl><Input placeholder="Culto de Jovens" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )} />
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="date" render={({ field }) => (
-                    <FormItem><FormLabel>Data</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem>
+                      <FormLabel>Data</FormLabel>
+                      <FormControl><Input type="date" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )} />
                   <FormField control={form.control} name="time" render={({ field }) => (
-                    <FormItem><FormLabel>Hora</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem>
+                      <FormLabel>Hora</FormLabel>
+                      <FormControl><Input type="time" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )} />
                 </div>
                 <FormField control={form.control} name="location" render={({ field }) => (
-                  <FormItem><FormLabel>Local</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem>
+                    <FormLabel>Local</FormLabel>
+                    <FormControl><Input placeholder="Templo Principal" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )} />
                 <FormField control={form.control} name="category" render={({ field }) => (
                   <FormItem>
@@ -108,13 +143,18 @@ export function EventsPage() {
                         <SelectItem value="social">Social</SelectItem>
                       </SelectContent>
                     </Select>
-                    <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="description" render={({ field }) => (
-                  <FormItem><FormLabel>Descrição</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem>
+                    <FormLabel>Descrição</FormLabel>
+                    <FormControl><Textarea placeholder="Detalhes do evento..." {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )} />
-                <Button type="submit" className="w-full btn-gradient">Salvar Evento</Button>
+                <Button type="submit" className="w-full" disabled={addMutation.isPending}>
+                  {addMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Salvar Evento
+                </Button>
               </form>
             </Form>
           </DialogContent>
@@ -123,31 +163,55 @@ export function EventsPage() {
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Pesquisar..." className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input 
+            placeholder="Pesquisar eventos..." 
+            className="pl-10" 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
+        <Button variant="outline" size="icon"><Filter className="h-4 w-4" /></Button>
       </div>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredEvents.length === 0 ? (
-          <div className="col-span-full py-20 text-center text-muted-foreground bg-slate-50 border-2 border-dashed rounded-3xl">Nenhum evento agendado.</div>
+        {isLoading && events.length === 0 ? (
+          <div className="col-span-full py-20 text-center text-muted-foreground">Carregando agenda...</div>
+        ) : filteredEvents.length === 0 ? (
+          <div className="col-span-full py-20 text-center text-muted-foreground">Nenhum evento encontrado.</div>
         ) : filteredEvents.map((event) => (
-          <Card key={event.id} className="hover:shadow-soft transition-all group border-slate-200">
+          <Card key={event.id} className="hover:shadow-soft transition-all group overflow-hidden border-slate-200">
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start mb-2">
                 {getCategoryBadge(event.category)}
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => deleteEvent(event.id)}>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  onClick={() => deleteMutation.mutate(event.id)}
+                >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-              <CardTitle className="text-xl">{event.title}</CardTitle>
+              <CardTitle className="text-xl group-hover:text-primary transition-colors">{event.title}</CardTitle>
               <CardDescription className="line-clamp-2">{event.description}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center text-sm text-muted-foreground"><Calendar className="h-4 w-4 mr-2" /> {new Date(event.date).toLocaleDateString()}</div>
-              <div className="flex items-center text-sm text-muted-foreground"><Clock className="h-4 w-4 mr-2" /> {event.time}</div>
-              <div className="flex items-center text-sm text-muted-foreground"><MapPin className="h-4 w-4 mr-2" /> {event.location}</div>
+              <div className="flex items-center text-sm text-muted-foreground">
+                <Calendar className="h-4 w-4 mr-2 text-primary" />
+                {new Date(event.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </div>
+              <div className="flex items-center text-sm text-muted-foreground">
+                <Clock className="h-4 w-4 mr-2 text-primary" />
+                {event.time}
+              </div>
+              <div className="flex items-center text-sm text-muted-foreground">
+                <MapPin className="h-4 w-4 mr-2 text-primary" />
+                {event.location}
+              </div>
             </CardContent>
-            <CardFooter className="bg-slate-50 border-t py-3">
-              <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Atividade Confirmada</span>
+            <CardFooter className="bg-slate-50 border-t mt-auto py-3">
+              <Button variant="ghost" className="w-full text-xs font-medium uppercase tracking-wider">
+                Ver detalhes
+              </Button>
             </CardFooter>
           </Card>
         ))}

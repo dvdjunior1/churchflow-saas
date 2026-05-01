@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Member, Ministry, MinistryMember, FinancialRecord } from '@shared/types';
+import type { Member, Ministry, MinistryMember, FinancialRecord, ChurchEvent } from '@shared/types';
 interface DataState {
   members: Member[];
   ministries: Ministry[];
   ministryMembers: MinistryMember[];
   financialRecords: FinancialRecord[];
+  events: ChurchEvent[];
   setMembers: (members: Member[]) => void;
   addMember: (member: Member) => void;
   updateMember: (id: string, updates: Partial<Member>) => void;
@@ -20,6 +21,10 @@ interface DataState {
   setFinancialRecords: (records: FinancialRecord[]) => void;
   addFinancialRecord: (record: FinancialRecord) => void;
   deleteFinancialRecord: (id: string) => void;
+  setEvents: (events: ChurchEvent[]) => void;
+  addEvent: (event: ChurchEvent) => void;
+  updateEvent: (id: string, updates: Partial<ChurchEvent>) => void;
+  deleteEvent: (id: string) => void;
 }
 export const useDataStore = create<DataState>()(
   persist(
@@ -28,6 +33,7 @@ export const useDataStore = create<DataState>()(
       ministries: [],
       ministryMembers: [],
       financialRecords: [],
+      events: [],
       setMembers: (members) => set({ members }),
       addMember: (member) => set((state) => ({
         members: state.members.some(m => m.id === member.id) ? state.members : [...state.members, member]
@@ -62,9 +68,19 @@ export const useDataStore = create<DataState>()(
       deleteFinancialRecord: (id) => set((state) => ({
         financialRecords: state.financialRecords.filter(r => r.id !== id)
       })),
+      setEvents: (events) => set({ events }),
+      addEvent: (event) => set((state) => ({
+        events: [...state.events, event]
+      })),
+      updateEvent: (id, updates) => set((state) => ({
+        events: state.events.map(e => e.id === id ? { ...e, ...updates } : e)
+      })),
+      deleteEvent: (id) => set((state) => ({
+        events: state.events.filter(e => e.id !== id)
+      })),
     }),
     {
-      name: 'churchflow-data-v2',
+      name: 'churchflow-data-v3',
     }
   )
 );

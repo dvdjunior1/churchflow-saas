@@ -1,5 +1,5 @@
 import { IndexedEntity } from "./core-utils";
-import type { Member, Ministry, MinistryMember, FinancialRecord } from "@shared/types";
+import type { Member, Ministry, MinistryMember, FinancialRecord, ChurchEvent } from "@shared/types";
 export class MemberEntity extends IndexedEntity<Member> {
   static readonly entityName = "member";
   static readonly indexName = "members";
@@ -86,6 +86,48 @@ export class FinancialRecordEntity extends IndexedEntity<FinancialRecord> {
   };
   static seedData: FinancialRecord[] = [
     { id: "f1", memberId: "m1", amount: 500, date: new Date().toISOString(), type: "tithe", category: "Dízimo", description: "Dízimo fiel" },
-    { id: "f2", amount: 1200, date: new Date().toISOString(), type: "offering", category: "Oferta Alzira", description: "Oferta de culto domingo" }
+    { id: "f2", amount: 1200, date: new Date().toISOString(), type: "offering", category: "Oferta", description: "Oferta de culto" }
+  ];
+}
+export class EventEntity extends IndexedEntity<ChurchEvent> {
+  static readonly entityName = "church-event";
+  static readonly indexName = "church-events";
+  static readonly initialState: ChurchEvent = {
+    id: "",
+    title: "",
+    description: "",
+    date: new Date().toISOString(),
+    time: "19:00",
+    location: "Santuário",
+    category: "culto"
+  };
+  static seedData: ChurchEvent[] = [
+    {
+      id: "ev1",
+      title: "Culto de Celebração",
+      description: "Culto principal com toda a família.",
+      date: new Date(Date.now() + 86400000 * 2).toISOString(),
+      time: "18:00",
+      location: "Templo Principal",
+      category: "culto"
+    },
+    {
+      id: "ev2",
+      title: "Ensaio do Louvor",
+      description: "Preparação para o domingo.",
+      date: new Date(Date.now() + 86400000).toISOString(),
+      time: "20:00",
+      location: "Auditório",
+      category: "ensaio"
+    },
+    {
+      id: "ev3",
+      title: "Reunião de Liderança",
+      description: "Planejamento estratégico mensal.",
+      date: new Date(Date.now() + 86400000 * 5).toISOString(),
+      time: "19:30",
+      location: "Sala de Reuniões",
+      category: "reuniao"
+    }
   ];
 }

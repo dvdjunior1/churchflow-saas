@@ -32,6 +32,15 @@ export interface MinistryMember {
   ministryId: string;
   role: 'leader' | 'member';
 }
+export interface ChurchEvent {
+  id: string;
+  title: string;
+  description: string;
+  date: string; // ISO
+  time: string; // HH:mm
+  location: string;
+  category: 'culto' | 'ensaio' | 'reuniao' | 'social';
+}
 export type FinanceType = 'tithe' | 'offering' | 'donation';
 export interface FinancialRecord {
   id: string;
@@ -53,4 +62,5 @@ export interface DashboardStats {
   totalMembers: number;
   totalMinistries: number;
   growthData: { month: string; count: number }[];
+  upcomingEvents: ChurchEvent[];
 }

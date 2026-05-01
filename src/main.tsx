@@ -17,6 +17,7 @@ import { DashboardPage } from '@/pages/admin/DashboardPage'
 import { MembersPage } from '@/pages/admin/MembersPage'
 import { MinistriesPage } from '@/pages/admin/MinistriesPage'
 import { FinancialPage } from '@/pages/admin/FinancialPage'
+import { EventsPage } from '@/pages/admin/EventsPage'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,10 +47,10 @@ const router = createBrowserRouter([
       { path: "members", element: <MembersPage /> },
       { path: "ministries", element: <MinistriesPage /> },
       { path: "finance", element: <FinancialPage /> },
+      { path: "events", element: <EventsPage /> },
     ]
   }
 ]);
-// Singleton Root Pattern to avoid "already passed to createRoot" warning
 declare global {
   interface Window {
     __reactRoot?: Root;

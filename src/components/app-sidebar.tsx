@@ -9,7 +9,8 @@ import {
   Sparkles,
   ChevronUp,
   UserCircle,
-  Banknote
+  Banknote,
+  Calendar
 } from "lucide-react";
 import {
   Sidebar,
@@ -44,6 +45,7 @@ export function AppSidebar(): JSX.Element {
     { title: "Dashboard", icon: Home, url: "/admin" },
     { title: "Membros", icon: Users, url: "/admin/members" },
     { title: "Ministérios", icon: Heart, url: "/admin/ministries" },
+    { title: "Agenda", icon: Calendar, url: "/admin/events" },
     { title: "Financeiro", icon: Banknote, url: "/admin/finance" },
   ];
   return (
