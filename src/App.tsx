@@ -67,9 +67,7 @@ const router = createBrowserRouter([
 export default function App() {
   const seedIfEmpty = useDataStore(s => s.seedIfEmpty);
   useEffect(() => {
-    // Triggers granular seeding and migration logic on initial mount
     seedIfEmpty();
-    console.info('ChurchFlow: Persistent Data Architecture initialized.');
   }, [seedIfEmpty]);
   return (
     <QueryClientProvider client={queryClient}>

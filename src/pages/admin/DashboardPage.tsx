@@ -15,21 +15,21 @@ import {
   ResponsiveContainer
 } from 'recharts';
 export function DashboardPage() {
-  const members = useDataStore(s => s.members) || [];
-  const ministries = useDataStore(s => s.ministries) || [];
-  const events = useDataStore(s => s.events) || [];
-  const activities = useDataStore(s => s.activities) || [];
-  const steps = useDataStore(s => s.activitySteps) || [];
-  const totalMembers = members.length;
-  const totalMinistries = ministries.length;
-  const upcomingEvents = events
-    .filter(e => e && e.date && new Date(e.date) >= new Date())
+  const members = useDataStore(s => s.members);
+  const ministries = useDataStore(s => s.ministries);
+  const events = useDataStore(s => s.events);
+  const activities = useDataStore(s => s.activities);
+  const steps = useDataStore(s => s.activitySteps);
+  const totalMembers = members?.length ?? 0;
+  const totalMinistries = ministries?.length ?? 0;
+  const upcomingEvents = (events ?? [])
+    .filter(e => e?.date && new Date(e.date) >= new Date())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 3);
-  const inProgressActivities = activities.filter(a => a?.status === 'in_progress').length;
+  const inProgressActivities = (activities ?? []).filter(a => a?.status === 'in_progress').length;
   const now = new Date();
-  const overdueSteps = steps.filter(s => s?.dueDate && new Date(s.dueDate) < now && s.status !== 'completed').length;
-  const nextActivities = activities
+  const overdueSteps = (steps ?? []).filter(s => s?.dueDate && new Date(s.dueDate) < now && s.status !== 'completed').length;
+  const nextActivities = (activities ?? [])
     .filter(a => a && (a.status === 'planned' || a.status === 'in_progress'))
     .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
     .slice(0, 3);

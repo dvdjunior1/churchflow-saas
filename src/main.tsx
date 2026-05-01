@@ -16,8 +16,6 @@ declare global {
 }
 const container = document.getElementById('root');
 if (container) {
-  // If the root doesn't exist on the window yet, create it.
-  // This ensures createRoot is only called once per page lifecycle.
   if (!window.__reactRoot) {
     window.__reactRoot = createRoot(container);
   }
