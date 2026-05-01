@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Member, Ministry, MinistryMember } from '@shared/types';
+import type { Member, Ministry, MinistryMember, FinancialRecord } from '@shared/types';
 interface DataState {
   members: Member[];
   ministries: Ministry[];
   ministryMembers: MinistryMember[];
+  financialRecords: FinancialRecord[];
   setMembers: (members: Member[]) => void;
   addMember: (member: Member) => void;
   updateMember: (id: string, updates: Partial<Member>) => void;
@@ -16,6 +17,9 @@ interface DataState {
   setMinistryMembers: (items: MinistryMember[]) => void;
   linkMember: (item: MinistryMember) => void;
   unlinkMember: (id: string) => void;
+  setFinancialRecords: (records: FinancialRecord[]) => void;
+  addFinancialRecord: (record: FinancialRecord) => void;
+  deleteFinancialRecord: (id: string) => void;
 }
 export const useDataStore = create<DataState>()(
   persist(
@@ -23,9 +27,10 @@ export const useDataStore = create<DataState>()(
       members: [],
       ministries: [],
       ministryMembers: [],
+      financialRecords: [],
       setMembers: (members) => set({ members }),
-      addMember: (member) => set((state) => ({ 
-        members: state.members.some(m => m.id === member.id) ? state.members : [...state.members, member] 
+      addMember: (member) => set((state) => ({
+        members: state.members.some(m => m.id === member.id) ? state.members : [...state.members, member]
       })),
       updateMember: (id, updates) => set((state) => ({
         members: state.members.map(m => m.id === id ? { ...m, ...updates } : m)
@@ -50,9 +55,16 @@ export const useDataStore = create<DataState>()(
       unlinkMember: (id) => set((state) => ({
         ministryMembers: state.ministryMembers.filter(mm => mm.id !== id)
       })),
+      setFinancialRecords: (financialRecords) => set({ financialRecords }),
+      addFinancialRecord: (record) => set((state) => ({
+        financialRecords: [record, ...state.financialRecords]
+      })),
+      deleteFinancialRecord: (id) => set((state) => ({
+        financialRecords: state.financialRecords.filter(r => r.id !== id)
+      })),
     }),
     {
-      name: 'churchflow-data',
+      name: 'churchflow-data-v2',
     }
   )
 );

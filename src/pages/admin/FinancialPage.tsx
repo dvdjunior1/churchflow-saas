@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Banknote, Plus, TrendingUp, Search, Trash2 } from 'lucide-react';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Banknote, Plus, TrendingUp, TrendingDown, Search, Filter, Loader2, Calendar } from 'lucide-react';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { api } from '@/lib/api-client';
 import { useDataStore } from '@/lib/data-store';
+import type { FinancialRecord, FinancialStats, Member } from '@shared/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
@@ -14,66 +17,60 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 const financeSchema = z.object({
-  amount: z.number().positive("Valor deve ser positivo"),
+  amount: z.coerce.number().positive("Valor deve ser positivo"),
   type: z.enum(['tithe', 'offering', 'donation']),
-  memberId: z.string().min(1, "Selecione um contribuinte"),
+  memberId: z.string().optional(),
   category: z.string().min(2, "Categoria obrigatória"),
   description: z.string().optional(),
-  date: z.string().min(10, "Data obrigatória"),
+  date: z.string().min(10),
 });
-type FormValues = z.infer<typeof financeSchema>;
 export function FinancialPage() {
+  const queryClient = useQueryClient();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [search, setSearch] = useState('');
   const records = useDataStore(s => s.financialRecords);
-  const addFinancialRecord = useDataStore(s => s.addFinancialRecord);
-  const deleteFinancialRecord = useDataStore(s => s.deleteFinancialRecord);
+  const setRecords = useDataStore(s => s.setFinancialRecords);
+  const addRecordAction = useDataStore(s => s.addFinancialRecord);
   const members = useDataStore(s => s.members);
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
-  const totalMonth = records
-    .filter(r => {
-      const d = new Date(r.date);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    })
-    .reduce((acc, curr) => acc + curr.amount, 0);
-  const distribution = ['tithe', 'offering', 'donation'].map(t => ({
-    name: t === 'tithe' ? 'Dízimos' : t === 'offering' ? 'Ofertas' : 'Doações',
-    type: t,
-    value: records.filter(r => r.type === t).reduce((acc, curr) => acc + curr.amount, 0)
-  }));
-  const form = useForm<FormValues>({
+  const { data: stats, isLoading: isLoadingStats } = useQuery<FinancialStats>({
+    queryKey: ['finance-stats'],
+    queryFn: () => api<FinancialStats>('/api/finances/stats'),
+  });
+  const { isLoading: isLoadingRecords } = useQuery<{ items: FinancialRecord[] }>({
+    queryKey: ['finances'],
+    queryFn: async () => {
+      const data = await api<{ items: FinancialRecord[] }>('/api/finances');
+      setRecords(data.items);
+      return data;
+    },
+  });
+  const form = useForm<z.infer<typeof financeSchema>>({
     resolver: zodResolver(financeSchema),
     defaultValues: {
       amount: 0,
       type: 'offering',
       category: 'Geral',
       date: new Date().toISOString().split('T')[0],
-      description: '',
-      memberId: 'anonymous'
+      description: ''
     },
   });
-  const onSubmit: SubmitHandler<FormValues> = (values) => {
-    try {
-      addFinancialRecord({
-        ...values,
-        memberId: values.memberId === 'anonymous' ? undefined : values.memberId
-      });
+  const addMutation = useMutation({
+    mutationFn: (data: z.infer<typeof financeSchema>) => api<FinancialRecord>('/api/finances', { method: 'POST', body: JSON.stringify(data) }),
+    onSuccess: (newRecord) => {
+      addRecordAction(newRecord);
       setIsAddOpen(false);
       form.reset();
-      toast.success('Registro financeiro salvo localmente!');
-    } catch (e) {
-      toast.error('Erro ao salvar registro');
+      queryClient.invalidateQueries({ queryKey: ['finance-stats'] });
+      toast.success('Registro financeiro salvo!');
     }
-  };
-  const formatCurrency = (val: number) =>
+  });
+  const formatCurrency = (val: number) => 
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   const getMemberName = (id?: string) => {
-    if (!id || id === 'anonymous') return 'Anônimo';
-    return members.find(m => m.id === id)?.fullName || 'Membro não encontrado';
+    if (!id) return 'Anônimo';
+    return members.find(m => m.id === id)?.fullName || 'Desconhecido';
   };
-  const filteredRecords = records.filter(r =>
+  const filteredRecords = records.filter(r => 
     r.category.toLowerCase().includes(search.toLowerCase()) ||
     getMemberName(r.memberId).toLowerCase().includes(search.toLowerCase())
   );
@@ -81,37 +78,28 @@ export function FinancialPage() {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Financeiro</h1>
-          <p className="text-muted-foreground">Controle central de contribuições processado localmente.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Financeiro</h1>
+          <p className="text-muted-foreground">Controle de dízimos, ofertas e movimentações.</p>
         </div>
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger asChild>
-            <Button className="btn-gradient h-12 px-6">
-              <Plus className="mr-2 h-5 w-5" /> Registrar Entrada
-            </Button>
+            <Button className="btn-gradient h-12 px-6"><Plus className="mr-2 h-5 w-5" /> Registrar Entrada</Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Nova Entrada Financeira</DialogTitle>
-              <DialogDescription>Dados persistidos instantaneamente.</DialogDescription>
+              <DialogDescription>Registre uma nova contribuição no sistema.</DialogDescription>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit((v) => addMutation.mutate(v))} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="amount" render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel>Valor (R$)</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" onChange={(e) => field.onChange(e.target.valueAsNumber)} value={field.value} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                    <FormItem className="col-span-2"><FormLabel>Valor (R$)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="type" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo</FormLabel>
+                    <FormItem><FormLabel>Tipo</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
                         <SelectContent>
                           <SelectItem value="tithe">Dízimo</SelectItem>
                           <SelectItem value="offering">Oferta</SelectItem>
@@ -122,109 +110,111 @@ export function FinancialPage() {
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="date" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Data</FormLabel>
-                      <FormControl><Input type="date" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
+                    <FormItem><FormLabel>Data</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
                 <FormField control={form.control} name="memberId" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contribuinte</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                  <FormItem><FormLabel>Membro (Opcional)</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Selecione o membro" /></SelectTrigger></FormControl>
                       <SelectContent>
                         <SelectItem value="anonymous">Anônimo</SelectItem>
                         {members.map(m => <SelectItem key={m.id} value={m.id}>{m.fullName}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="category" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Categoria / Destinação</FormLabel>
-                    <FormControl><Input placeholder="Ex: Geral, Missões" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
+                  <FormItem><FormLabel>Categoria</FormLabel><FormControl><Input placeholder="Ex: Culto de Domingo" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
-                <Button type="submit" className="w-full btn-gradient">Salvar Registro</Button>
+                <Button type="submit" className="w-full" disabled={addMutation.isPending}>
+                  {addMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Registrar
+                </Button>
               </form>
             </Form>
           </DialogContent>
         </Dialog>
       </div>
       <div className="grid gap-6 md:grid-cols-3">
-        <Card className="bg-primary text-primary-foreground border-none shadow-primary">
+        <Card className="bg-primary text-primary-foreground">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium opacity-80 uppercase">Total do Mês</CardTitle>
+            <CardTitle className="text-sm font-medium opacity-80">Total do Mês</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{formatCurrency(totalMonth)}</div>
-            <div className="flex items-center mt-2 text-xs font-medium text-green-300">
-              <TrendingUp className="h-3 w-3 mr-1" /> Calculado em Tempo Real
+            <div className="text-3xl font-bold">{isLoadingStats ? '...' : formatCurrency(stats?.totalMonth ?? 0)}</div>
+            <div className="flex items-center mt-2 text-xs opacity-90">
+              {stats && stats.growth >= 0 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+              {Math.abs(stats?.growth ?? 0).toFixed(1)}% vs mês anterior
             </div>
           </CardContent>
         </Card>
-        {distribution.map((d, i) => (
-          <Card key={i} className="hover:shadow-soft transition-shadow border-slate-200">
+        {stats?.distribution.map((d, i) => (
+          <Card key={i}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase">{d.name}</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">{d.name}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">{formatCurrency(d.value)}</div>
+              <div className="text-2xl font-bold">{formatCurrency(d.value)}</div>
               <div className="w-full bg-secondary h-1.5 rounded-full mt-3 overflow-hidden">
-                <div className="bg-primary h-full transition-all" style={{ width: `${(d.value / (totalMonth || 1)) * 100}%` }} />
+                <div 
+                  className="bg-primary h-full transition-all duration-1000" 
+                  style={{ width: `${(d.value / (stats.totalMonth || 1)) * 100}%` }} 
+                />
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
-      <Card className="rounded-xl overflow-hidden border border-slate-200 shadow-soft">
-        <CardHeader className="bg-muted/30 border-b">
+      <Card>
+        <CardHeader>
           <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-            <CardTitle className="text-lg">Histórico Local</CardTitle>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar..." className="pl-10 w-full md:w-[300px] bg-background" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <div>
+              <CardTitle>Histórico de Entradas</CardTitle>
+              <CardDescription>Todas as contribuições recentes registradas.</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Pesquisar..." 
+                  className="pl-9 w-full md:w-[250px]" 
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <Button variant="outline" size="icon"><Filter className="h-4 w-4" /></Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent>
           <Table>
-            <TableHeader className="bg-muted/20">
+            <TableHeader>
               <TableRow>
-                <TableHead className="pl-6">Data</TableHead>
+                <TableHead>Data</TableHead>
                 <TableHead>Membro</TableHead>
                 <TableHead>Categoria</TableHead>
                 <TableHead>Tipo</TableHead>
-                <TableHead className="text-right pr-6">Valor</TableHead>
+                <TableHead className="text-right">Valor</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredRecords.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-20 text-muted-foreground italic">Nenhum registro encontrado.</TableCell></TableRow>
-              ) : (
-                filteredRecords.map((r) => (
-                  <TableRow key={r.id} className="group">
-                    <TableCell className="pl-6 text-sm text-muted-foreground">{new Date(r.date).toLocaleDateString()}</TableCell>
-                    <TableCell className="font-medium">{getMemberName(r.memberId)}</TableCell>
-                    <TableCell className="text-sm">{r.category}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize">{r.type === 'tithe' ? 'Dízimo' : r.type === 'offering' ? 'Oferta' : 'Doação'}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-bold pr-6">
-                      <div className="flex items-center justify-end gap-2">
-                        {formatCurrency(r.amount)}
-                        <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 text-destructive" onClick={() => deleteFinancialRecord(r.id)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
+              {isLoadingRecords && records.length === 0 ? (
+                <TableRow><TableCell colSpan={5} className="text-center py-10">Carregando dados...</TableCell></TableRow>
+              ) : filteredRecords.length === 0 ? (
+                <TableRow><TableCell colSpan={5} className="text-center py-10">Nenhum registro encontrado.</TableCell></TableRow>
+              ) : filteredRecords.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {new Date(r.date).toLocaleDateString('pt-BR')}
+                  </TableCell>
+                  <TableCell className="font-medium">{getMemberName(r.memberId)}</TableCell>
+                  <TableCell className="text-sm">{r.category}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="capitalize">{r.type === 'tithe' ? 'Dízimo' : r.type === 'offering' ? 'Oferta' : 'Doação'}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right font-bold">{formatCurrency(r.amount)}</TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </CardContent>

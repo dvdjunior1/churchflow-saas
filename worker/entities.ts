@@ -1,5 +1,5 @@
 import { IndexedEntity } from "./core-utils";
-import type { Member, Ministry, MinistryMember } from "@shared/types";
+import type { Member, Ministry, MinistryMember, FinancialRecord } from "@shared/types";
 export class MemberEntity extends IndexedEntity<Member> {
   static readonly entityName = "member";
   static readonly indexName = "members";
@@ -71,5 +71,21 @@ export class MinistryMemberEntity extends IndexedEntity<MinistryMember> {
   static seedData: MinistryMember[] = [
     { id: "mm1", memberId: "m2", ministryId: "min1", role: "leader" },
     { id: "mm2", memberId: "m1", ministryId: "min2", role: "member" }
+  ];
+}
+export class FinancialRecordEntity extends IndexedEntity<FinancialRecord> {
+  static readonly entityName = "financial-record";
+  static readonly indexName = "financial-records";
+  static readonly initialState: FinancialRecord = {
+    id: "",
+    amount: 0,
+    date: new Date().toISOString(),
+    type: "offering",
+    category: "Geral",
+    description: ""
+  };
+  static seedData: FinancialRecord[] = [
+    { id: "f1", memberId: "m1", amount: 500, date: new Date().toISOString(), type: "tithe", category: "Dízimo", description: "Dízimo fiel" },
+    { id: "f2", amount: 1200, date: new Date().toISOString(), type: "offering", category: "Oferta Alzira", description: "Oferta de culto domingo" }
   ];
 }

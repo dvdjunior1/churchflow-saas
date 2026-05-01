@@ -2,7 +2,7 @@ import '@/lib/errorReporter';
 import { enableMapSet } from "immer";
 enableMapSet();
 import React, { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
+import { createRoot, Root } from 'react-dom/client'
 import {
   createBrowserRouter,
   RouterProvider
@@ -16,8 +16,16 @@ import { LoginPage } from '@/pages/auth/LoginPage'
 import { DashboardPage } from '@/pages/admin/DashboardPage'
 import { MembersPage } from '@/pages/admin/MembersPage'
 import { MinistriesPage } from '@/pages/admin/MinistriesPage'
+import { FinancialPage } from '@/pages/admin/FinancialPage'
 import { AuthGuard } from '@/components/auth/AuthGuard'
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 const router = createBrowserRouter([
   {
     path: "/",
@@ -37,10 +45,21 @@ const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       { path: "members", element: <MembersPage /> },
       { path: "ministries", element: <MinistriesPage /> },
+      { path: "finance", element: <FinancialPage /> },
     ]
   }
 ]);
-createRoot(document.getElementById('root')!).render(
+// Singleton Root Pattern to avoid "already passed to createRoot" warning
+declare global {
+  interface Window {
+    __reactRoot?: Root;
+  }
+}
+const container = document.getElementById('root')!;
+if (!window.__reactRoot) {
+  window.__reactRoot = createRoot(container);
+}
+window.__reactRoot.render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>
@@ -48,4 +67,4 @@ createRoot(document.getElementById('root')!).render(
       </ErrorBoundary>
     </QueryClientProvider>
   </StrictMode>,
-)
+);

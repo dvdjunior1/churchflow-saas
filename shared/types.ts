@@ -32,6 +32,23 @@ export interface MinistryMember {
   ministryId: string;
   role: 'leader' | 'member';
 }
+export type FinanceType = 'tithe' | 'offering' | 'donation';
+export interface FinancialRecord {
+  id: string;
+  memberId?: string; // Optional for anonymous offerings
+  amount: number;
+  date: string; // ISO
+  type: FinanceType;
+  category: string;
+  description: string;
+}
+export interface FinancialStats {
+  totalMonth: number;
+  lastMonth: number;
+  growth: number;
+  distribution: { name: string; value: number }[];
+  history: { date: string; amount: number }[];
+}
 export interface DashboardStats {
   totalMembers: number;
   totalMinistries: number;

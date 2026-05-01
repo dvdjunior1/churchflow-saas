@@ -1,14 +1,15 @@
 import React from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
-import { 
-  Home, 
-  Users, 
-  Heart, 
-  Settings, 
-  LogOut, 
+import {
+  Home,
+  Users,
+  Heart,
+  Settings,
+  LogOut,
   Sparkles,
   ChevronUp,
-  UserCircle
+  UserCircle,
+  Banknote
 } from "lucide-react";
 import {
   Sidebar,
@@ -43,6 +44,7 @@ export function AppSidebar(): JSX.Element {
     { title: "Dashboard", icon: Home, url: "/admin" },
     { title: "Membros", icon: Users, url: "/admin/members" },
     { title: "Ministérios", icon: Heart, url: "/admin/ministries" },
+    { title: "Financeiro", icon: Banknote, url: "/admin/finance" },
   ];
   return (
     <Sidebar collapsible="icon" className="border-r">
@@ -60,8 +62,8 @@ export function AppSidebar(): JSX.Element {
           <SidebarMenu>
             {navItems.map((item) => (
               <SidebarMenuItem key={item.url}>
-                <SidebarMenuButton 
-                  asChild 
+                <SidebarMenuButton
+                  asChild
                   isActive={location.pathname === item.url}
                   tooltip={item.title}
                 >
