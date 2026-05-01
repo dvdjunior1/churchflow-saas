@@ -20,7 +20,6 @@ export interface Member {
   baptismDate?: string; // ISO
   role: string;
   joinedAt: string; // ISO
-  // Evolved Fields
   whatsapp?: string;
   alternatePhone?: string;
   gender?: 'M' | 'F' | 'O';

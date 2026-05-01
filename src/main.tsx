@@ -2,7 +2,7 @@ import '@/lib/errorReporter';
 import { enableMapSet } from "immer";
 enableMapSet();
 import React, { StrictMode, useEffect } from 'react'
-import { createRoot, Root } from 'react-dom/client'
+import { createRoot } from 'react-dom/client'
 import {
   createBrowserRouter,
   RouterProvider
@@ -68,16 +68,7 @@ const router = createBrowserRouter([
     ]
   }
 ]);
-declare global {
-  interface Window {
-    __reactRoot?: Root;
-  }
-}
-const container = document.getElementById('root')!;
-if (!window.__reactRoot) {
-  window.__reactRoot = createRoot(container);
-}
-export function App() {
+function App() {
   const seedIfEmpty = useDataStore(s => s.seedIfEmpty);
   useEffect(() => {
     seedIfEmpty();
@@ -90,8 +81,12 @@ export function App() {
     </QueryClientProvider>
   );
 }
-window.__reactRoot.render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+const container = document.getElementById('root');
+if (container) {
+  const root = createRoot(container);
+  root.render(
+    <StrictMode>
+      <App />
+    </StrictMode>
+  );
+}

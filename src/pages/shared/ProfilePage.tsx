@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,19 +20,20 @@ const profileSchema = z.object({
   email: z.string().email("E-mail inválido"),
   phone: z.string().min(10, "Telefone inválido"),
   birthDate: z.string().min(10, "Data inválida"),
-  photoUrl: z.string().url("URL inválida").or(z.literal("")),
+  photoUrl: z.string().min(1, "Foto obrigatória"),
 });
+type FormValues = z.infer<typeof profileSchema>;
 export default function ProfilePage() {
   const user = useAuthStore(s => s.user);
   const members = useDataStore(s => s.members);
   const updateMember = useDataStore(s => s.updateMember);
   const [isSaving, setIsSaving] = useState(false);
   const memberProfile = members.find(m => m.id === user?.memberId);
-  const form = useForm<z.infer<typeof profileSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      fullName: user?.name || '',
-      email: user?.email || '',
+      fullName: memberProfile?.fullName || user?.name || '',
+      email: memberProfile?.email || user?.email || '',
       phone: memberProfile?.phone || '',
       birthDate: memberProfile?.birthDate || '',
       photoUrl: memberProfile?.photoUrl || '',
@@ -49,23 +50,20 @@ export default function ProfilePage() {
       });
     }
   }, [memberProfile, form]);
-  const onSubmit = async (values: z.infer<typeof profileSchema>) => {
+  const onSubmit: SubmitHandler<FormValues> = async (values) => {
     if (!user?.memberId) {
       toast.error("Perfil de membro não vinculado.");
       return;
     }
     setIsSaving(true);
-    // Optimistic Update locally
     updateMember(user.memberId, values);
     try {
-      // Background Sync with Worker
       await api(`/api/members/self/${user.memberId}`, {
         method: 'PUT',
         body: JSON.stringify(values),
       });
       toast.success("Perfil atualizado e sincronizado!");
     } catch (error) {
-      // Fallback: We already updated local state, so we just inform the user that sync failed
       console.error("Sync failed, but local state updated", error);
       toast.info("Alterações salvas localmente (Sincronização pendente).");
     } finally {

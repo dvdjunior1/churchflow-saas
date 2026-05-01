@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Calendar, Plus, MapPin, Clock, Search, Filter, Trash2, Save } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { Calendar, Plus, MapPin, Clock, Search, Trash2 } from 'lucide-react';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useDataStore } from '@/lib/data-store';
-import type { ChurchEvent } from '@shared/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent, CardFooter, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -22,13 +21,14 @@ const eventSchema = z.object({
   location: z.string().min(3, "Local obrigatório"),
   category: z.enum(['culto', 'ensaio', 'reuniao', 'social']),
 });
+type FormValues = z.infer<typeof eventSchema>;
 export function EventsPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [search, setSearch] = useState('');
   const events = useDataStore(s => s.events);
   const addEvent = useDataStore(s => s.addEvent);
   const deleteEvent = useDataStore(s => s.deleteEvent);
-  const form = useForm<z.infer<typeof eventSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
       title: '',
@@ -39,7 +39,7 @@ export function EventsPage() {
       category: 'culto',
     },
   });
-  const onSubmit = (values: z.infer<typeof eventSchema>) => {
+  const onSubmit: SubmitHandler<FormValues> = (values) => {
     try {
       addEvent(values);
       setIsAddOpen(false);
@@ -87,14 +87,14 @@ export function EventsPage() {
                 )} />
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="date" render={({ field }) => (
-                    <FormItem><FormLabel>Data</FormLabel><FormControl><Input type="date" {...field} /></FormControl></FormItem>
+                    <FormItem><FormLabel>Data</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="time" render={({ field }) => (
-                    <FormItem><FormLabel>Hora</FormLabel><FormControl><Input type="time" {...field} /></FormControl></FormItem>
+                    <FormItem><FormLabel>Hora</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
                 <FormField control={form.control} name="location" render={({ field }) => (
-                  <FormItem><FormLabel>Local</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                  <FormItem><FormLabel>Local</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="category" render={({ field }) => (
                   <FormItem>
@@ -108,10 +108,11 @@ export function EventsPage() {
                         <SelectItem value="social">Social</SelectItem>
                       </SelectContent>
                     </Select>
+                    <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="description" render={({ field }) => (
-                  <FormItem><FormLabel>Descrição</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>
+                  <FormItem><FormLabel>Descrição</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <Button type="submit" className="w-full btn-gradient">Salvar Evento</Button>
               </form>

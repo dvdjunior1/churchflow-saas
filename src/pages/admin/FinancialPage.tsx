@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Banknote, Plus, TrendingUp, TrendingDown, Search, Save, Trash2 } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { Banknote, Plus, TrendingUp, Search, Trash2 } from 'lucide-react';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useDataStore } from '@/lib/data-store';
-import type { FinancialRecord } from '@shared/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
@@ -22,6 +21,7 @@ const financeSchema = z.object({
   description: z.string().optional(),
   date: z.string().min(10, "Data obrigatória"),
 });
+type FormValues = z.infer<typeof financeSchema>;
 export function FinancialPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -29,7 +29,6 @@ export function FinancialPage() {
   const addFinancialRecord = useDataStore(s => s.addFinancialRecord);
   const deleteFinancialRecord = useDataStore(s => s.deleteFinancialRecord);
   const members = useDataStore(s => s.members);
-  // Compute stats locally
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
@@ -44,7 +43,7 @@ export function FinancialPage() {
     type: t,
     value: records.filter(r => r.type === t).reduce((acc, curr) => acc + curr.amount, 0)
   }));
-  const form = useForm<z.infer<typeof financeSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(financeSchema),
     defaultValues: {
       amount: 0,
@@ -55,7 +54,7 @@ export function FinancialPage() {
       memberId: 'anonymous'
     },
   });
-  const onSubmit = (values: z.infer<typeof financeSchema>) => {
+  const onSubmit: SubmitHandler<FormValues> = (values) => {
     try {
       addFinancialRecord({
         ...values,
@@ -119,12 +118,14 @@ export function FinancialPage() {
                           <SelectItem value="donation">Doação</SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormMessage />
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="date" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Data</FormLabel>
                       <FormControl><Input type="date" {...field} /></FormControl>
+                      <FormMessage />
                     </FormItem>
                   )} />
                 </div>
@@ -138,12 +139,14 @@ export function FinancialPage() {
                         {members.map(m => <SelectItem key={m.id} value={m.id}>{m.fullName}</SelectItem>)}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="category" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Categoria / Destinação</FormLabel>
                     <FormControl><Input placeholder="Ex: Geral, Missões" {...field} /></FormControl>
+                    <FormMessage />
                   </FormItem>
                 )} />
                 <Button type="submit" className="w-full btn-gradient">Salvar Registro</Button>

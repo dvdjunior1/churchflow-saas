@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, MoreHorizontal, Filter, UserCircle, Save, Camera, Cake } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useDataStore } from '@/lib/data-store';
@@ -53,24 +53,24 @@ const memberSchema = z.object({
   fullName: z.string().min(3, "Nome muito curto"),
   email: z.string().email("E-mail inválido"),
   phone: z.string().min(10, "Telefone inválido"),
-  birthDate: z.string().optional().default(""),
-  baptismDate: z.string().optional().default(""),
+  birthDate: z.string().min(1, "Data de nascimento obrigatória"),
+  baptismDate: z.string().optional(),
   role: z.string().min(2, "Cargo obrigatório"),
-  photoUrl: z.string().optional().default(""),
-  whatsapp: z.string().optional().default(""),
-  alternatePhone: z.string().optional().default(""),
-  gender: z.enum(['M', 'F', 'O']).optional().default('M'),
-  maritalStatus: z.enum(['solteiro', 'casado', 'divorciado', 'viuvo']).optional().default('solteiro'),
-  zipCode: z.string().optional().default(""),
-  street: z.string().optional().default(""),
-  number: z.string().optional().default(""),
-  complement: z.string().optional().default(""),
-  neighborhood: z.string().optional().default(""),
-  city: z.string().optional().default(""),
-  state: z.string().optional().default(""),
-  memberStatus: z.enum(['ativo', 'inativo', 'visitante', 'transferido']).default('ativo'),
-  notes: z.string().optional().default(""),
-  showBirthdayPublic: z.boolean().default(false),
+  photoUrl: z.string().min(1, "Foto obrigatória"),
+  whatsapp: z.string().optional(),
+  alternatePhone: z.string().optional(),
+  gender: z.enum(['M', 'F', 'O']),
+  maritalStatus: z.enum(['solteiro', 'casado', 'divorciado', 'viuvo']),
+  zipCode: z.string().optional(),
+  street: z.string().optional(),
+  number: z.string().optional(),
+  complement: z.string().optional(),
+  neighborhood: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  memberStatus: z.enum(['ativo', 'inativo', 'visitante', 'transferido']),
+  notes: z.string().optional(),
+  showBirthdayPublic: z.boolean(),
 });
 type FormValues = z.infer<typeof memberSchema>;
 export function MembersPage() {
@@ -110,12 +110,17 @@ export function MembersPage() {
   useEffect(() => {
     if (editingMember) {
       form.reset({
-        ...editingMember,
+        fullName: editingMember.fullName || '',
+        email: editingMember.email || '',
+        phone: editingMember.phone || '',
         birthDate: editingMember.birthDate || '',
         baptismDate: editingMember.baptismDate || '',
+        role: editingMember.role || 'Membro',
         photoUrl: editingMember.photoUrl || '',
         whatsapp: editingMember.whatsapp || '',
         alternatePhone: editingMember.alternatePhone || '',
+        gender: editingMember.gender || 'M',
+        maritalStatus: editingMember.maritalStatus || 'solteiro',
         zipCode: editingMember.zipCode || '',
         street: editingMember.street || '',
         number: editingMember.number || '',
@@ -123,11 +128,34 @@ export function MembersPage() {
         neighborhood: editingMember.neighborhood || '',
         city: editingMember.city || '',
         state: editingMember.state || '',
+        memberStatus: editingMember.memberStatus || 'ativo',
         notes: editingMember.notes || '',
         showBirthdayPublic: !!editingMember.showBirthdayPublic,
-      } as FormValues);
+      });
     } else {
-      form.reset();
+      form.reset({
+        fullName: '',
+        email: '',
+        phone: '',
+        birthDate: '',
+        baptismDate: '',
+        role: 'Membro',
+        photoUrl: '',
+        whatsapp: '',
+        alternatePhone: '',
+        gender: 'M',
+        maritalStatus: 'solteiro',
+        zipCode: '',
+        street: '',
+        number: '',
+        complement: '',
+        neighborhood: '',
+        city: '',
+        state: '',
+        memberStatus: 'ativo',
+        notes: '',
+        showBirthdayPublic: false,
+      });
     }
   }, [editingMember, form]);
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -140,7 +168,7 @@ export function MembersPage() {
       reader.readAsDataURL(file);
     }
   }, [form]);
-  const onSubmit = (values: FormValues) => {
+  const onSubmit: SubmitHandler<FormValues> = (values) => {
     try {
       if (editingMember) {
         updateMemberAction(editingMember.id, values);
@@ -162,8 +190,8 @@ export function MembersPage() {
   const filteredMembers = members.filter(m =>
     m.fullName.toLowerCase().includes(search.toLowerCase()) ||
     m.email.toLowerCase().includes(search.toLowerCase()) ||
-    m.memberStatus?.toLowerCase().includes(search.toLowerCase()) ||
-    m.city?.toLowerCase().includes(search.toLowerCase())
+    (m.memberStatus || '').toLowerCase().includes(search.toLowerCase()) ||
+    (m.city || '').toLowerCase().includes(search.toLowerCase())
   );
   const getStatusBadge = (status?: string) => {
     switch (status) {
@@ -304,7 +332,7 @@ export function MembersPage() {
                       <FormItem><FormLabel>WhatsApp</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
                     )} />
                     <FormField control={form.control} name="birthDate" render={({ field }) => (
-                      <FormItem><FormLabel>Data de Nascimento</FormLabel><FormControl><Input type="date" {...field} /></FormControl></FormItem>
+                      <FormItem><FormLabel>Data de Nascimento *</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="gender" render={({ field }) => (
                       <FormItem>
@@ -361,7 +389,7 @@ export function MembersPage() {
                   <h3 className="text-sm font-bold uppercase tracking-widest text-primary mb-4">Eclesiásticos</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField control={form.control} name="role" render={({ field }) => (
-                      <FormItem><FormLabel>Cargo/Função *</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                      <FormItem><FormLabel>Cargo/Função *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="memberStatus" render={({ field }) => (
                       <FormItem>
