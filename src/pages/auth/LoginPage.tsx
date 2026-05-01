@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Loader2, User } from 'lucide-react';
+import { Sparkles, Loader2, User, Info } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardContent, CardFooter, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const login = useAuthStore(s => s.login);
@@ -16,10 +17,11 @@ export function LoginPage() {
     setLoading(true);
     setTimeout(() => {
       login({
-        id: '1',
+        id: 'admin_user',
         name: 'Pastor João Silva',
         email: 'admin@churchflow.com',
-        role: 'admin'
+        role: 'admin',
+        memberId: 'm1' // Joâo Silva is m1 in seeds
       });
       setLoading(false);
       toast.success('Bem-vindo ao ChurchFlow!');
@@ -30,7 +32,7 @@ export function LoginPage() {
     setLoading(true);
     setTimeout(() => {
       login({
-        id: 'user_m1',
+        id: 'user_m2',
         name: 'Maria Oliveira',
         email: 'maria@example.com',
         role: 'member',
@@ -59,7 +61,21 @@ export function LoginPage() {
         <CardContent className="space-y-4">
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="email">E-mail</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button type="button" className="text-muted-foreground hover:text-primary">
+                        <Info className="h-3 w-3" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">Use admin@churchflow.com para testar o painel ADM.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Input
                 id="email"
                 type="email"

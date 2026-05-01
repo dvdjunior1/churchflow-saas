@@ -86,22 +86,28 @@ export function MinistriesPage() {
   const handleAssignMember = () => {
     if (!managingMinistry || !assignMemberId) return;
     try {
+      const isFirstMember = currentTeam.length === 0;
+      const role = isFirstMember ? 'leader' : 'member';
       linkMemberAction({
         memberId: assignMemberId,
         ministryId: managingMinistry.id,
-        role: 'member',
+        role: role,
         positionId: assignPositionId === 'none' ? undefined : assignPositionId
       });
+      if (isFirstMember) {
+        updateMinistryAction(managingMinistry.id, { leaderId: assignMemberId });
+        toast.success(`Membro vinculado como líder do ministério`);
+      } else {
+        toast.success("Membro vinculado com sucesso");
+      }
       setAssignMemberId("");
       setAssignPositionId("none");
-      toast.success("Membro vinculado com sucesso");
     } catch (e) {
       toast.error("Erro ao vincular membro");
     }
   };
   const toggleLeader = (mmId: string, memberId: string, isCurrentlyLeader: boolean) => {
     if (!managingMinistry) return;
-    // If promoting someone to leader, demote previous leader
     if (!isCurrentlyLeader) {
       const oldLeaderMM = currentTeam.find(t => t.role === 'leader');
       if (oldLeaderMM) {
@@ -111,7 +117,6 @@ export function MinistriesPage() {
       updateMinistryMemberAction(mmId, { role: 'leader' });
       toast.success("Novo líder definido");
     } else {
-      // Demoting current leader
       updateMinistryAction(managingMinistry.id, { leaderId: undefined });
       updateMinistryMemberAction(mmId, { role: 'member' });
       toast.success("Liderança removida");
@@ -231,7 +236,6 @@ export function MinistriesPage() {
           </SheetHeader>
           <ScrollArea className="flex-1 px-6">
             <div className="space-y-8 py-4">
-              {/* Assignment Form */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm font-bold text-primary uppercase tracking-wider">
                   <UserPlus className="h-4 w-4" /> Vincular Novo Membro
@@ -268,8 +272,8 @@ export function MinistriesPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button 
-                    className="w-full btn-gradient" 
+                  <Button
+                    className="w-full btn-gradient"
                     disabled={!assignMemberId}
                     onClick={handleAssignMember}
                   >
@@ -278,7 +282,6 @@ export function MinistriesPage() {
                 </div>
               </div>
               <Separator />
-              {/* Team List */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm font-bold text-primary uppercase tracking-wider">
@@ -295,7 +298,7 @@ export function MinistriesPage() {
                     <div key={item.id} className="flex flex-col p-3 rounded-lg border bg-white shadow-sm hover:shadow-md transition-all gap-3 border-slate-200">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10 border">
+                          <Avatar className="h-10 w-10 border shadow-sm">
                             <AvatarImage src={item.member?.photoUrl} />
                             <AvatarFallback>{item.member?.fullName.substring(0,2).toUpperCase()}</AvatarFallback>
                           </Avatar>
@@ -308,7 +311,7 @@ export function MinistriesPage() {
                             </div>
                             <div className="flex gap-1.5 items-center mt-0.5">
                               {item.position ? (
-                                <Badge variant="outline" className="text-[9px] py-0 border-primary/20 text-primary">
+                                <Badge variant="outline" className="text-[9px] py-0 border-primary/20 text-primary bg-primary/5">
                                   {item.position.name}
                                 </Badge>
                               ) : (
@@ -342,7 +345,7 @@ export function MinistriesPage() {
                             className={`h-7 px-3 text-[10px] ${item.role === 'leader' ? 'bg-primary' : ''}`}
                             onClick={() => toggleLeader(item.id, item.memberId, item.role === 'leader')}
                           >
-                            <ShieldCheck className="h-3.5 w-3.5 mr-1.5" /> 
+                            <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
                             {item.role === 'leader' ? 'Liderança Ativa' : 'Tornar Líder'}
                           </Button>
                         </div>
@@ -353,7 +356,7 @@ export function MinistriesPage() {
                             toast.success('Função atualizada');
                           }}
                         >
-                          <SelectTrigger className="h-7 text-[10px] w-[140px] bg-slate-50">
+                          <SelectTrigger className="h-7 text-[10px] w-[140px] bg-slate-50 border-slate-200">
                             <SelectValue placeholder="Trocar Função" />
                           </SelectTrigger>
                           <SelectContent>

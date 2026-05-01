@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, Search, MoreHorizontal, Filter, UserCircle, Save, Camera, Cake, Briefcase } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Filter, UserCircle, Save, Camera, Cake, Briefcase, X } from 'lucide-react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -58,7 +58,7 @@ const memberSchema = z.object({
   phone: z.string().min(10, "Telefone inválido"),
   birthDate: z.string().min(1, "Data de nascimento obrigatória"),
   baptismDate: z.string().optional(),
-  role: z.string().optional(), 
+  role: z.string().optional(),
   positions: z.array(z.string()).optional(),
   photoUrl: z.string().optional(),
   whatsapp: z.string().optional(),
@@ -86,7 +86,7 @@ export function MembersPage() {
   const updateMemberAction = useDataStore(s => s.updateMember);
   const deleteMemberAction = useDataStore(s => s.deleteMember);
   const allPositions = useDataStore(s => s.positions);
-  const activeChurchPositions = useMemo(() => 
+  const activeChurchPositions = useMemo(() =>
     allPositions.filter(p => p.active && p.scope === 'church'),
   [allPositions]);
   const form = useForm<FormValues>({
@@ -210,10 +210,6 @@ export function MembersPage() {
       default: return <Badge variant="outline">{status}</Badge>;
     }
   };
-  const getPositionNames = (ids?: string[]) => {
-    if (!ids || ids.length === 0) return null;
-    return ids.map(id => allPositions.find(p => p.id === id)?.name).filter(Boolean).join(', ');
-  };
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -235,6 +231,14 @@ export function MembersPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          {search && (
+            <button 
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
         </div>
         <Button variant="outline" size="icon">
           <Filter className="h-4 w-4" />
@@ -253,7 +257,18 @@ export function MembersPage() {
           </TableHeader>
           <TableBody>
             {filteredMembers.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-10">Nenhum membro encontrado.</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-20">
+                  <div className="flex flex-col items-center gap-3">
+                    <p className="text-muted-foreground">Nenhum membro encontrado com estes critérios.</p>
+                    {search && (
+                      <Button variant="link" size="sm" onClick={() => setSearch('')}>
+                        Limpar Filtros
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
             ) : (
               filteredMembers.map((member) => (
                 <TableRow key={member.id} className="group hover:bg-slate-50 transition-colors">
@@ -263,12 +278,12 @@ export function MembersPage() {
                         <AvatarImage src={member.photoUrl} alt={member.fullName} />
                         <AvatarFallback>{member.fullName.substring(0, 2).toUpperCase()}</AvatarFallback>
                       </Avatar>
-                      <div className="flex flex-col">
+                      <div className="flex flex-col overflow-hidden">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-foreground">{member.fullName}</span>
+                          <span className="font-medium text-foreground truncate max-w-[150px]">{member.fullName}</span>
                           {member.showBirthdayPublic && <Cake className="h-3 w-3 text-rose-500" />}
                         </div>
-                        <span className="text-xs text-muted-foreground">{member.role}</span>
+                        <span className="text-xs text-muted-foreground truncate max-w-[150px]">{member.email}</span>
                       </div>
                     </div>
                   </TableCell>
@@ -276,7 +291,7 @@ export function MembersPage() {
                     <div className="flex flex-wrap gap-1 max-w-[200px]">
                       {member.positions?.map(pid => {
                         const pname = allPositions.find(p => p.id === pid)?.name;
-                        return pname ? <Badge key={pid} variant="outline" className="text-[10px] py-0">{pname}</Badge> : null;
+                        return pname ? <Badge key={`${member.id}-${pid}`} variant="outline" className="text-[10px] py-0">{pname}</Badge> : null;
                       })}
                       {!member.positions?.length && <span className="text-xs text-slate-300 italic">Nenhum</span>}
                     </div>
@@ -374,7 +389,10 @@ export function MembersPage() {
                 </div>
                 <Separator />
                 <div>
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-primary mb-4">Eclesiásticos & Cargos</h3>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Briefcase className="h-4 w-4 text-primary" />
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-primary">Eclesiásticos & Cargos</h3>
+                  </div>
                   <div className="grid grid-cols-1 gap-6">
                     <FormField control={form.control} name="memberStatus" render={({ field }) => (
                       <FormItem className="max-w-xs">
@@ -391,9 +409,7 @@ export function MembersPage() {
                     <FormField control={form.control} name="positions" render={({ field }) => (
                       <FormItem>
                         <div className="mb-4">
-                          <FormLabel className="text-base flex items-center gap-2">
-                            <Briefcase className="h-4 w-4" /> Atribuições Gerais (Cargos da Igreja)
-                          </FormLabel>
+                          <FormLabel className="text-base">Atribuições Gerais (Cargos da Igreja)</FormLabel>
                           <FormDescription>Selecione as funções que este membro desempenha na estrutura geral.</FormDescription>
                         </div>
                         <ScrollArea className="h-[200px] rounded-md border p-4 bg-slate-50/50">

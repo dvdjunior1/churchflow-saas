@@ -164,10 +164,11 @@ export const useDataStore = create<DataState>()(
           { id: 'pos-v', name: 'Vocalista', description: 'Backing vocal ou solista', scope: 'ministry', active: true, createdAt: nowStr, updatedAt: nowStr },
           { id: 'pos-o-s', name: 'Operador de Som', description: 'Suporte técnico e áudio', scope: 'ministry', active: true, createdAt: nowStr, updatedAt: nowStr },
         ];
-        const m1Id = uuidv4();
-        const m2Id = uuidv4();
-        const min1Id = uuidv4();
-        const min2Id = uuidv4();
+        // Use stable IDs to match LoginPage and backend seeds
+        const m1Id = 'm1'; 
+        const m2Id = 'm2';
+        const min1Id = 'min1';
+        const min2Id = 'min2';
         const seedMembers: Member[] = [
           {
             id: m1Id,
@@ -204,8 +205,8 @@ export const useDataStore = create<DataState>()(
           { id: min2Id, name: "Kids", description: "Ministério infantil" }
         ];
         const seedMM: MinistryMember[] = [
-          { id: uuidv4(), memberId: m2Id, ministryId: min1Id, role: 'leader', positionId: 'pos-l-l' },
-          { id: uuidv4(), memberId: m1Id, ministryId: min2Id, role: 'member', positionId: 'pos-m-k' }
+          { id: 'mm1', memberId: m2Id, ministryId: min1Id, role: 'leader', positionId: 'pos-l-l' },
+          { id: 'mm2', memberId: m1Id, ministryId: min2Id, role: 'member', positionId: 'pos-m-k' }
         ];
         set({
           positions: seedPositions,
