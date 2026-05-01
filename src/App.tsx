@@ -18,6 +18,7 @@ import MemberDashboardPage from '@/pages/member/MemberDashboardPage';
 import MemberDonationsPage from '@/pages/member/MemberDonationsPage';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { useDataStore } from '@/lib/data-store';
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -65,10 +66,10 @@ const router = createBrowserRouter([
   }
 ]);
 export default function App() {
-  const seedIfEmpty = useDataStore(s => s.seedIfEmpty);
   useEffect(() => {
+    const { seedIfEmpty } = useDataStore.getState();
     seedIfEmpty();
-  }, [seedIfEmpty]);
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>
