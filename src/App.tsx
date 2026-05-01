@@ -65,10 +65,9 @@ const router = createBrowserRouter([
   }
 ]);
 export default function App() {
-  const seedIfEmpty = useDataStore(s => s.seedIfEmpty);
   useEffect(() => {
-    seedIfEmpty();
-  }, [seedIfEmpty]);
+    useDataStore.getState().seedIfEmpty();
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>
