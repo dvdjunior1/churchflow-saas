@@ -1,91 +1,14 @@
 import '@/lib/errorReporter';
 import { enableMapSet } from "immer";
+import React, { StrictMode } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
+import '@/index.css';
+import App from './App';
 enableMapSet();
-import React, { StrictMode, useEffect } from 'react'
-import { createRoot, type Root } from 'react-dom/client'
-import {
-  createBrowserRouter,
-  RouterProvider
-} from "react-router-dom";
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { RouteErrorBoundary } from '@/components/RouteErrorBoundary';
-import '@/index.css'
-import { HomePage } from '@/pages/HomePage'
-import { LoginPage } from '@/pages/auth/LoginPage'
-import { DashboardPage } from '@/pages/admin/DashboardPage'
-import { MembersPage } from '@/pages/admin/MembersPage'
-import { MinistriesPage } from '@/pages/admin/MinistriesPage'
-import ProfilePage from '@/pages/shared/ProfilePage'
-import { FinancialPage } from '@/pages/admin/FinancialPage'
-import { EventsPage } from '@/pages/admin/EventsPage'
-import ReportsPage from '@/pages/admin/ReportsPage'
-import MemberDashboardPage from '@/pages/member/MemberDashboardPage'
-import MemberDonationsPage from '@/pages/member/MemberDonationsPage'
-import { AuthGuard } from '@/components/auth/AuthGuard'
-import { useDataStore } from '@/lib/data-store'
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
-const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <HomePage />,
-    errorElement: <RouteErrorBoundary />,
-  },
-  {
-    path: "/login",
-    element: <LoginPage />,
-    errorElement: <RouteErrorBoundary />,
-  },
-  {
-    path: "/admin",
-    element: <AuthGuard />,
-    errorElement: <RouteErrorBoundary />,
-    children: [
-      { index: true, element: <DashboardPage /> },
-      { path: "members", element: <MembersPage /> },
-      { path: "ministries", element: <MinistriesPage /> },
-      { path: "finance", element: <FinancialPage /> },
-      { path: "events", element: <EventsPage /> },
-      { path: "reports", element: <ReportsPage /> },
-      { path: "profile", element: <ProfilePage /> },
-    ]
-  },
-  {
-    path: "/member",
-    element: <AuthGuard />,
-    errorElement: <RouteErrorBoundary />,
-    children: [
-      { path: "dashboard", element: <MemberDashboardPage /> },
-      { path: "donations", element: <MemberDonationsPage /> },
-      { path: "profile", element: <ProfilePage /> },
-    ]
-  }
-]);
 /**
- * Internal App component to handle store initialization.
- * Separate from entry point to allow for cleaner Fast Refresh.
+ * Singleton pattern for React Root to prevent double-initialization warnings
+ * during Hot Module Replacement (HMR).
  */
-function AppRoot() {
-  const seedIfEmpty = useDataStore(s => s.seedIfEmpty);
-  useEffect(() => {
-    seedIfEmpty();
-  }, [seedIfEmpty]);
-  return (
-    <QueryClientProvider client={queryClient}>
-      <ErrorBoundary>
-        <RouterProvider router={router} />
-      </ErrorBoundary>
-    </QueryClientProvider>
-  );
-}
-// Singleton pattern for React Root to prevent double-initialization warnings
 declare global {
   interface Window {
     __reactRoot?: Root;
@@ -93,12 +16,14 @@ declare global {
 }
 const container = document.getElementById('root');
 if (container) {
+  // If the root doesn't exist on the window yet, create it.
+  // This ensures createRoot is only called once per page lifecycle.
   if (!window.__reactRoot) {
     window.__reactRoot = createRoot(container);
   }
   window.__reactRoot.render(
     <StrictMode>
-      <AppRoot />
+      <App />
     </StrictMode>
   );
 }

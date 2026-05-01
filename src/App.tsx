@@ -8,12 +8,10 @@ import { LoginPage } from '@/pages/auth/LoginPage';
 import { DashboardPage } from '@/pages/admin/DashboardPage';
 import { MembersPage } from '@/pages/admin/MembersPage';
 import { MinistriesPage } from '@/pages/admin/MinistriesPage';
-import { PositionsPage } from '@/pages/admin/PositionsPage';
 import ProfilePage from '@/pages/shared/ProfilePage';
 import { FinancialPage } from '@/pages/admin/FinancialPage';
 import { EventsPage } from '@/pages/admin/EventsPage';
 import ReportsPage from '@/pages/admin/ReportsPage';
-import { ActivitiesPage } from '@/pages/admin/ActivitiesPage';
 import MemberDashboardPage from '@/pages/member/MemberDashboardPage';
 import MemberDonationsPage from '@/pages/member/MemberDonationsPage';
 import { AuthGuard } from '@/components/auth/AuthGuard';
@@ -45,10 +43,8 @@ const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       { path: "members", element: <MembersPage /> },
       { path: "ministries", element: <MinistriesPage /> },
-      { path: "positions", element: <PositionsPage /> },
       { path: "finance", element: <FinancialPage /> },
       { path: "events", element: <EventsPage /> },
-      { path: "activities", element: <ActivitiesPage /> },
       { path: "reports", element: <ReportsPage /> },
       { path: "profile", element: <ProfilePage /> },
     ]
@@ -65,9 +61,10 @@ const router = createBrowserRouter([
   }
 ]);
 export default function App() {
+  const seedIfEmpty = useDataStore(s => s.seedIfEmpty);
   useEffect(() => {
-    useDataStore.getState().seedIfEmpty();
-  }, []);
+    seedIfEmpty();
+  }, [seedIfEmpty]);
   return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>
