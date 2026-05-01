@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 const financeSchema = z.object({
-  amount: z.coerce.number().positive("Valor deve ser positivo"),
+  amount: z.number().positive("Valor deve ser positivo"),
   type: z.enum(['tithe', 'offering', 'donation']),
   memberId: z.string().min(1, "Selecione um contribuinte"),
   category: z.string().min(2, "Categoria obrigatória"),
@@ -110,53 +110,84 @@ export function FinancialPage() {
             <Form {...form}>
               <form onSubmit={form.handleSubmit((v) => addMutation.mutate(v))} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <FormField control={form.control} name="amount" render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel>Valor (R$)</FormLabel>
-                      <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="type" render={({ field }) => (
+                  <FormField
+                    control={form.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem className="col-span-2">
+                        <FormLabel>Valor (R$)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            value={field.value}
+                            ref={field.ref}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tipo</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            <SelectItem value="tithe">Dízimo</SelectItem>
+                            <SelectItem value="offering">Oferta</SelectItem>
+                            <SelectItem value="donation">Doação</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Data</FormLabel>
+                        <FormControl><Input type="date" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="memberId"
+                  render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tipo</FormLabel>
+                      <FormLabel>Contribuinte</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                         <SelectContent>
-                          <SelectItem value="tithe">Dízimo</SelectItem>
-                          <SelectItem value="offering">Oferta</SelectItem>
-                          <SelectItem value="donation">Doação</SelectItem>
+                          <SelectItem value="anonymous">Anônimo</SelectItem>
+                          {members.map(m => <SelectItem key={m.id} value={m.id}>{m.fullName}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </FormItem>
-                  )} />
-                  <FormField control={form.control} name="date" render={({ field }) => (
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Data</FormLabel>
-                      <FormControl><Input type="date" {...field} /></FormControl>
+                      <FormLabel>Categoria / Destinação</FormLabel>
+                      <FormControl><Input placeholder="Ex: Culto de Jovens" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
-                  )} />
-                </div>
-                <FormField control={form.control} name="memberId" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contribuinte</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        <SelectItem value="anonymous">Anônimo</SelectItem>
-                        {members.map(m => <SelectItem key={m.id} value={m.id}>{m.fullName}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="category" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Categoria / Destinação</FormLabel>
-                    <FormControl><Input placeholder="Ex: Culto de Jovens" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                  )}
+                />
                 <Button type="submit" className="w-full btn-gradient" disabled={addMutation.isPending}>
                   {addMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Registrar
                 </Button>
@@ -236,21 +267,23 @@ export function FinancialPage() {
                 <TableRow><TableCell colSpan={5} className="text-center py-20"><Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" /> Carregando...</TableCell></TableRow>
               ) : filteredRecords.length === 0 ? (
                 <TableRow><TableCell colSpan={5} className="text-center py-20 text-muted-foreground italic">Nenhum registro encontrado.</TableCell></TableRow>
-              ) : filteredRecords.map((r) => (
-                <TableRow key={r.id} className="hover:bg-muted/10 transition-colors">
-                  <TableCell className="pl-6 text-sm text-muted-foreground">
-                    {new Date(r.date).toLocaleDateString('pt-BR')}
-                  </TableCell>
-                  <TableCell className="font-medium">{getMemberName(r.memberId)}</TableCell>
-                  <TableCell className="text-sm">{r.category}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="capitalize px-2 py-0 h-6">
-                      {r.type === 'tithe' ? 'Dízimo' : r.type === 'offering' ? 'Oferta' : 'Doação'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-bold pr-6 text-foreground">{formatCurrency(r.amount)}</TableCell>
-                </TableRow>
-              ))}
+              ) : (
+                filteredRecords.map((r) => (
+                  <TableRow key={r.id} className="hover:bg-muted/10 transition-colors">
+                    <TableCell className="pl-6 text-sm text-muted-foreground">
+                      {new Date(r.date).toLocaleDateString('pt-BR')}
+                    </TableCell>
+                    <TableCell className="font-medium">{getMemberName(r.memberId)}</TableCell>
+                    <TableCell className="text-sm">{r.category}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize px-2 py-0 h-6">
+                        {r.type === 'tithe' ? 'Dízimo' : r.type === 'offering' ? 'Oferta' : 'Doação'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-bold pr-6 text-foreground">{formatCurrency(r.amount)}</TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>

@@ -11,7 +11,8 @@ import {
   UserCircle,
   Banknote,
   Calendar,
-  FileBarChart
+  FileBarChart,
+  Wallet
 } from "lucide-react";
 import {
   Sidebar,
@@ -42,7 +43,8 @@ export function AppSidebar(): JSX.Element {
     toast.info("Logout realizado com sucesso.");
     navigate("/");
   };
-  const navItems = [
+  const isAdmin = user?.role && ['admin', 'pastor', 'staff'].includes(user.role);
+  const adminNavItems = [
     { title: "Dashboard", icon: Home, url: "/admin" },
     { title: "Membros", icon: Users, url: "/admin/members" },
     { title: "Ministérios", icon: Heart, url: "/admin/ministries" },
@@ -50,10 +52,16 @@ export function AppSidebar(): JSX.Element {
     { title: "Financeiro", icon: Banknote, url: "/admin/finance" },
     { title: "Relatórios", icon: FileBarChart, url: "/admin/reports" },
   ];
+  const memberNavItems = [
+    { title: "Meu Dashboard", icon: Home, url: "/member/dashboard" },
+    { title: "Agenda", icon: Calendar, url: "/admin/events" }, // Shared access
+    { title: "Contribuições", icon: Wallet, url: "/member/donations" },
+  ];
+  const navItems = isAdmin ? adminNavItems : memberNavItems;
   return (
     <Sidebar collapsible="icon" className="border-r border-slate-200">
       <SidebarHeader className="h-16 flex items-center px-4">
-        <Link to="/admin" className="flex items-center gap-3">
+        <Link to={isAdmin ? "/admin" : "/member/dashboard"} className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
             <Sparkles className="h-5 w-5 text-primary-foreground" />
           </div>
@@ -62,7 +70,9 @@ export function AppSidebar(): JSX.Element {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Principal</SidebarGroupLabel>
+          <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
+            {isAdmin ? "Administração" : "Painel do Membro"}
+          </SidebarGroupLabel>
           <SidebarMenu>
             {navItems.map((item) => (
               <SidebarMenuItem key={item.url}>
@@ -100,7 +110,7 @@ export function AppSidebar(): JSX.Element {
               </div>
               <div className="flex flex-col text-left group-data-[collapsible=icon]:hidden overflow-hidden">
                 <span className="text-sm font-medium truncate text-foreground">{user?.name}</span>
-                <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
+                <span className="text-xs text-muted-foreground truncate capitalize">{user?.role}</span>
               </div>
               <ChevronUp className="ml-auto h-4 w-4 group-data-[collapsible=icon]:hidden text-muted-foreground" />
             </SidebarMenuButton>

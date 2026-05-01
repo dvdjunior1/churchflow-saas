@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Users, Heart, ArrowUpRight, Calendar, MapPin, Clock, FileText, Download } from 'lucide-react';
+import { Users, Heart, ArrowUpRight, Calendar, MapPin, Clock, FileText, Download, Banknote } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api-client';
@@ -154,22 +154,24 @@ export function DashboardPage() {
                 <div className="py-8 text-center text-sm text-muted-foreground">Carregando agenda...</div>
               ) : stats?.upcomingEvents.length === 0 ? (
                 <div className="py-8 text-center text-sm text-muted-foreground italic">Nenhum evento próximo.</div>
-              ) : stats?.upcomingEvents.map((event) => (
-                <div key={event.id} className="group p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-soft transition-all cursor-pointer">
-                  <div className="flex justify-between items-start mb-1">
-                    <h4 className="font-bold text-slate-900 group-hover:text-primary transition-colors text-sm">{event.title}</h4>
-                    <span className="text-[9px] font-bold uppercase text-primary bg-primary/10 px-1.5 py-0.5 rounded">{event.category}</span>
-                  </div>
-                  <div className="flex items-center gap-3 mt-1 opacity-70">
-                    <div className="flex items-center text-[10px] text-muted-foreground">
-                      <Clock className="h-3 w-3 mr-1" /> {event.time}
+              ) : (
+                stats?.upcomingEvents.map((event) => (
+                  <div key={event.id} className="group p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-soft transition-all cursor-pointer">
+                    <div className="flex justify-between items-start mb-1">
+                      <h4 className="font-bold text-slate-900 group-hover:text-primary transition-colors text-sm">{event.title}</h4>
+                      <span className="text-[9px] font-bold uppercase text-primary bg-primary/10 px-1.5 py-0.5 rounded">{event.category}</span>
                     </div>
-                    <div className="flex items-center text-[10px] text-muted-foreground">
-                      <MapPin className="h-3 w-3 mr-1" /> {event.location}
+                    <div className="flex items-center gap-3 mt-1 opacity-70">
+                      <div className="flex items-center text-[10px] text-muted-foreground">
+                        <Clock className="h-3 w-3 mr-1" /> {event.time}
+                      </div>
+                      <div className="flex items-center text-[10px] text-muted-foreground">
+                        <MapPin className="h-3 w-3 mr-1" /> {event.location}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </CardContent>
           </Card>
         </div>

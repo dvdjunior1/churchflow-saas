@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2, User } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,6 @@ export function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Mock authentication delay
     setTimeout(() => {
       login({
         id: '1',
@@ -27,6 +26,21 @@ export function LoginPage() {
       navigate('/admin');
     }, 1200);
   };
+  const handleMemberDemo = () => {
+    setLoading(true);
+    setTimeout(() => {
+      login({
+        id: 'user_m1',
+        name: 'Maria Oliveira',
+        email: 'maria@example.com',
+        role: 'member',
+        memberId: 'm2' // Maria is m2 in seeds
+      });
+      setLoading(false);
+      toast.success('Acesso ao Portal do Membro');
+      navigate('/member/dashboard');
+    }, 800);
+  };
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/40 px-4">
       <div className="absolute inset-0 bg-gradient-rainbow opacity-5 pointer-events-none" />
@@ -37,20 +51,20 @@ export function LoginPage() {
               <Sparkles className="w-6 h-6 text-white" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">Login Administrativo</CardTitle>
+          <CardTitle className="text-2xl font-bold tracking-tight">Portal ChurchFlow</CardTitle>
           <CardDescription>
-            Acesse o painel de controle da sua igreja
+            Acesse sua conta administrativa ou portal do membro
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                placeholder="exemplo@igreja.com" 
-                required 
+              <Input
+                id="email"
+                type="email"
+                placeholder="exemplo@igreja.com"
+                required
                 defaultValue="admin@churchflow.com"
                 className="bg-secondary"
               />
@@ -60,10 +74,10 @@ export function LoginPage() {
                 <Label htmlFor="password">Senha</Label>
                 <button type="button" className="text-xs text-primary hover:underline">Esqueceu a senha?</button>
               </div>
-              <Input 
-                id="password" 
-                type="password" 
-                required 
+              <Input
+                id="password"
+                type="password"
+                required
                 defaultValue="admin123"
                 className="bg-secondary"
               />
@@ -72,6 +86,13 @@ export function LoginPage() {
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Entrar no Sistema'}
             </Button>
           </form>
+          <div className="relative py-2">
+            <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+            <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">Ou acesso rápido</span></div>
+          </div>
+          <Button variant="outline" className="w-full h-11 border-dashed" onClick={handleMemberDemo} disabled={loading}>
+            <User className="mr-2 h-4 w-4" /> Entrar como Membro (Demo)
+          </Button>
         </CardContent>
         <CardFooter className="flex flex-col gap-4 text-center border-t pt-6">
           <p className="text-sm text-muted-foreground">

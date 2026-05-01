@@ -7,7 +7,8 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'pastor' | 'staff';
+  role: 'admin' | 'pastor' | 'staff' | 'member';
+  memberId?: string;
 }
 export interface Member {
   id: string;

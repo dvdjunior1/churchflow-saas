@@ -19,6 +19,7 @@ import { MinistriesPage } from '@/pages/admin/MinistriesPage'
 import { FinancialPage } from '@/pages/admin/FinancialPage'
 import { EventsPage } from '@/pages/admin/EventsPage'
 import ReportsPage from '@/pages/admin/ReportsPage'
+import MemberDashboardPage from '@/pages/member/MemberDashboardPage'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -50,6 +51,17 @@ const router = createBrowserRouter([
       { path: "finance", element: <FinancialPage /> },
       { path: "events", element: <EventsPage /> },
       { path: "reports", element: <ReportsPage /> },
+      { path: "profile", element: <div className="p-8">Página de Perfil (Admin)</div> },
+    ]
+  },
+  {
+    path: "/member",
+    element: <AuthGuard />,
+    errorElement: <RouteErrorBoundary />,
+    children: [
+      { path: "dashboard", element: <MemberDashboardPage /> },
+      { path: "donations", element: <div className="p-8">Histórico de Contribuições Detalhado</div> },
+      { path: "profile", element: <div className="p-8">Página de Perfil (Membro)</div> },
     ]
   }
 ]);
