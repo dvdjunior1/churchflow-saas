@@ -13,6 +13,7 @@ import ProfilePage from '@/pages/shared/ProfilePage';
 import { FinancialPage } from '@/pages/admin/FinancialPage';
 import { EventsPage } from '@/pages/admin/EventsPage';
 import ReportsPage from '@/pages/admin/ReportsPage';
+import { ActivitiesPage } from '@/pages/admin/ActivitiesPage';
 import MemberDashboardPage from '@/pages/member/MemberDashboardPage';
 import MemberDonationsPage from '@/pages/member/MemberDonationsPage';
 import { AuthGuard } from '@/components/auth/AuthGuard';
@@ -47,6 +48,7 @@ const router = createBrowserRouter([
       { path: "positions", element: <PositionsPage /> },
       { path: "finance", element: <FinancialPage /> },
       { path: "events", element: <EventsPage /> },
+      { path: "activities", element: <ActivitiesPage /> },
       { path: "reports", element: <ReportsPage /> },
       { path: "profile", element: <ProfilePage /> },
     ]

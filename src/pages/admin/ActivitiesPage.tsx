@@ -1,19 +1,31 @@
 import React, { useState, useMemo } from 'react';
-import { ListTodo, Plus, Search, Calendar, User, Edit2, Trash2, ChevronRight, Clock, CheckCircle2 } from 'lucide-react';
+import { 
+  ListTodo, 
+  Plus, 
+  Search, 
+  Filter, 
+  Calendar, 
+  User, 
+  MoreHorizontal, 
+  CheckCircle2, 
+  Clock, 
+  AlertCircle, 
+  ChevronRight,
+  Trash2,
+  Edit2
+} from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useDataStore } from '@/lib/data-store';
-import { useAuthStore } from '@/lib/auth-store';
-import { getManagedMinistryIds } from '@/lib/perms';
-import type { Activity, ActivityStatus, StepStatus } from '@shared/types';
+import type { Activity, ActivityStep, ActivityStatus, ActivityType, StepStatus } from '@shared/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -41,7 +53,6 @@ const stepSchema = z.object({
 export function ActivitiesPage() {
   const activities = useDataStore(s => s.activities);
   const steps = useDataStore(s => s.activitySteps);
-  const ministryMembers = useDataStore(s => s.ministryMembers);
   const addActivity = useDataStore(s => s.addActivity);
   const updateActivity = useDataStore(s => s.updateActivity);
   const deleteActivity = useDataStore(s => s.deleteActivity);
@@ -50,25 +61,15 @@ export function ActivitiesPage() {
   const deleteStep = useDataStore(s => s.deleteActivityStep);
   const ministries = useDataStore(s => s.ministries);
   const members = useDataStore(s => s.members);
-  const user = useAuthStore(s => s.user);
   const [search, setSearch] = useState('');
+  const [ministryFilter, setMinistryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [isStepsDialogOpen, setIsStepsDialogOpen] = useState(false);
   const [activeActivityId, setActiveActivityId] = useState<string | null>(null);
   const [isAddStepOpen, setIsAddStepOpen] = useState(false);
-  const isAdmin = user?.role === 'admin' || user?.role === 'pastor';
-  const managedMinIds = useMemo(() => getManagedMinistryIds(ministryMembers, user?.memberId), [ministryMembers, user]);
-  const filteredActivities = useMemo(() => {
-    return activities.filter(a => {
-      const matchesSearch = a.title.toLowerCase().includes(search.toLowerCase());
-      const hasPermission = isAdmin || managedMinIds.includes(a.ministryId);
-      return matchesSearch && hasPermission;
-    });
-  }, [activities, search, isAdmin, managedMinIds]);
-  const filteredMinistries = useMemo(() => {
-    return isAdmin ? ministries : ministries.filter(m => managedMinIds.includes(m.id));
-  }, [ministries, isAdmin, managedMinIds]);
   const activityForm = useForm<z.infer<typeof activitySchema>>({
     resolver: zodResolver(activitySchema),
     defaultValues: {
@@ -82,6 +83,15 @@ export function ActivitiesPage() {
       title: '', responsibleMemberId: '', dueDate: '', status: 'pending'
     }
   });
+  const filteredActivities = useMemo(() => {
+    return activities.filter(a => {
+      const matchesSearch = a.title.toLowerCase().includes(search.toLowerCase());
+      const matchesMin = ministryFilter === 'all' || a.ministryId === ministryFilter;
+      const matchesStat = statusFilter === 'all' || a.status === statusFilter;
+      const matchesType = typeFilter === 'all' || a.type === typeFilter;
+      return matchesSearch && matchesMin && matchesStat && matchesType;
+    });
+  }, [activities, search, ministryFilter, statusFilter, typeFilter]);
   const handleCreateActivity = (values: z.infer<typeof activitySchema>) => {
     if (editingActivity) {
       updateActivity(editingActivity.id, values);
@@ -122,9 +132,36 @@ export function ActivitiesPage() {
             <Plus className="mr-2 h-4 w-4" /> Nova Atividade
           </Button>
         </div>
-        <div className="relative mb-8 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar título..." className="pl-10" value={search} onChange={e => setSearch(e.target.value)} />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar título..." className="pl-10" value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <Select value={ministryFilter} onValueChange={setMinistryFilter}>
+            <SelectTrigger><SelectValue placeholder="Ministério" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos Ministérios</SelectItem>
+              {ministries.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos Status</SelectItem>
+              <SelectItem value="planned">Planejada</SelectItem>
+              <SelectItem value="in_progress">Em Progresso</SelectItem>
+              <SelectItem value="completed">Concluída</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos Tipos</SelectItem>
+              <SelectItem value="event">Evento</SelectItem>
+              <SelectItem value="meeting">Reunião</SelectItem>
+              <SelectItem value="project">Projeto</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {filteredActivities.length === 0 ? (
@@ -136,6 +173,7 @@ export function ActivitiesPage() {
             const progress = getActivityProgress(activity.id);
             const ministryName = ministries.find(m => m.id === activity.ministryId)?.name;
             const responsible = members.find(m => m.id === activity.responsibleMemberId)?.fullName;
+            const activityStepsCount = steps.filter(s => s.activityId === activity.id).length;
             return (
               <Card key={activity.id} className="hover:shadow-md transition-shadow group">
                 <CardHeader className="pb-3">
@@ -156,7 +194,10 @@ export function ActivitiesPage() {
                         <Edit2 className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => {
-                        if(confirm("Excluir atividade?")) deleteActivity(activity.id);
+                        if(confirm("Excluir atividade e todas as tarefas vinculadas?")) {
+                          deleteActivity(activity.id);
+                          toast.info("Atividade removida");
+                        }
                       }}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -164,28 +205,32 @@ export function ActivitiesPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-2"><Calendar className="h-3 w-3" /> {new Date(activity.startDate).toLocaleDateString()}</div>
-                    <div className="flex items-center gap-2"><User className="h-3 w-3" /> {responsible}</div>
-                    <div className="flex items-center gap-2 col-span-2">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Calendar className="h-3 w-3" /> {new Date(activity.startDate).toLocaleDateString()}
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <User className="h-3 w-3" /> {responsible}
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground col-span-2">
                       <Badge variant="secondary" className="text-[10px] py-0">{ministryName}</Badge>
                       <Badge variant="outline" className="text-[10px] py-0 capitalize">{activity.type}</Badge>
                     </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs font-medium">
-                      <span>Progresso</span>
+                      <span>Progresso ({activityStepsCount} tarefas)</span>
                       <span>{progress}%</span>
                     </div>
                     <Progress value={progress} className="h-1.5" />
                   </div>
                 </CardContent>
-                <div className="px-6 py-3 border-t bg-muted/10 flex justify-between items-center cursor-pointer" onClick={() => {
+                <div className="px-6 py-3 border-t bg-muted/10 flex justify-between items-center">
+                  <Button variant="ghost" className="text-xs h-8 gap-2" onClick={() => {
                     setActiveActivityId(activity.id);
                     setIsStepsDialogOpen(true);
-                }}>
-                  <Button variant="ghost" className="text-xs h-8 gap-2">
-                    <ListTodo className="h-3 w-3" /> Ver Tarefas
+                  }}>
+                    <ListTodo className="h-3 w-3" /> Detalhes & Tarefas
                   </Button>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
@@ -193,10 +238,12 @@ export function ActivitiesPage() {
             );
           })}
         </div>
+        {/* Activity Create/Edit Dialog */}
         <Dialog open={isActivityDialogOpen} onOpenChange={setIsActivityDialogOpen}>
           <DialogContent className="sm:max-w-xl">
             <DialogHeader>
               <DialogTitle>{editingActivity ? 'Editar Atividade' : 'Nova Atividade'}</DialogTitle>
+              <DialogDescription>Dados fundamentais para o planejamento ministerial.</DialogDescription>
             </DialogHeader>
             <Form {...activityForm}>
               <form onSubmit={activityForm.handleSubmit(handleCreateActivity)} className="space-y-4 py-2">
@@ -209,7 +256,7 @@ export function ActivitiesPage() {
                       <FormLabel>Ministério</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent>{filteredMinistries.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}</SelectContent>
+                        <SelectContent>{ministries.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}</SelectContent>
                       </Select>
                     </FormItem>
                   )} />
@@ -224,6 +271,21 @@ export function ActivitiesPage() {
                   )} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
+                  <FormField control={activityForm.control} name="type" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          <SelectItem value="event">Evento</SelectItem>
+                          <SelectItem value="meeting">Reunião</SelectItem>
+                          <SelectItem value="visit">Visita</SelectItem>
+                          <SelectItem value="project">Projeto</SelectItem>
+                          <SelectItem value="service">Culto/Serviço</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )} />
                   <FormField control={activityForm.control} name="status" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Status</FormLabel>
@@ -233,14 +295,15 @@ export function ActivitiesPage() {
                           <SelectItem value="planned">Planejada</SelectItem>
                           <SelectItem value="in_progress">Em Progresso</SelectItem>
                           <SelectItem value="completed">Concluída</SelectItem>
+                          <SelectItem value="canceled">Cancelada</SelectItem>
                         </SelectContent>
                       </Select>
                     </FormItem>
                   )} />
-                  <FormField control={activityForm.control} name="startDate" render={({ field }) => (
-                    <FormItem><FormLabel>Início</FormLabel><FormControl><Input type="datetime-local" {...field} /></FormControl></FormItem>
-                  )} />
                 </div>
+                <FormField control={activityForm.control} name="startDate" render={({ field }) => (
+                  <FormItem><FormLabel>Início</FormLabel><FormControl><Input type="datetime-local" {...field} /></FormControl></FormItem>
+                )} />
                 <FormField control={activityForm.control} name="description" render={({ field }) => (
                   <FormItem><FormLabel>Descrição</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>
                 )} />
@@ -249,16 +312,21 @@ export function ActivitiesPage() {
             </Form>
           </DialogContent>
         </Dialog>
+        {/* Steps Dialog */}
         <Dialog open={isStepsDialogOpen} onOpenChange={setIsStepsDialogOpen}>
           <DialogContent className="sm:max-w-3xl h-[80vh] flex flex-col p-0">
             <DialogHeader className="p-6 pb-2">
               <DialogTitle>Gerenciar Tarefas</DialogTitle>
+              <DialogDescription>Passo a passo para execução da atividade.</DialogDescription>
             </DialogHeader>
             <div className="flex-1 overflow-hidden flex flex-col">
               <div className="p-6 pt-2 border-b bg-muted/10">
-                <Button size="sm" variant="outline" onClick={() => setIsAddStepOpen(!isAddStepOpen)}>
-                  {isAddStepOpen ? 'Cancelar' : 'Novo Passo'}
-                </Button>
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="text-sm font-bold flex items-center gap-2"><ListTodo className="h-4 w-4" /> Lista de Passos</h4>
+                  <Button size="sm" variant="outline" onClick={() => setIsAddStepOpen(!isAddStepOpen)}>
+                    {isAddStepOpen ? 'Cancelar' : 'Novo Passo'}
+                  </Button>
+                </div>
                 {isAddStepOpen && (
                   <Form {...stepForm}>
                     <form onSubmit={stepForm.handleSubmit((v) => {
@@ -267,11 +335,11 @@ export function ActivitiesPage() {
                       setIsAddStepOpen(false);
                       stepForm.reset();
                       toast.success("Passo adicionado");
-                    })} className="space-y-3 bg-white p-4 rounded-lg border shadow-sm mt-4">
-                      <FormField control={stepForm.control} name="title" render={({ field }) => (
-                        <FormItem><FormLabel>Tarefa</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-                      )} />
+                    })} className="space-y-3 bg-white p-4 rounded-lg border shadow-sm mb-4">
                       <div className="grid grid-cols-2 gap-3">
+                        <FormField control={stepForm.control} name="title" render={({ field }) => (
+                          <FormItem className="col-span-2"><FormLabel>Tarefa</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                        )} />
                         <FormField control={stepForm.control} name="responsibleMemberId" render={({ field }) => (
                           <FormItem>
                             <FormLabel>Responsável</FormLabel>
@@ -292,27 +360,42 @@ export function ActivitiesPage() {
               </div>
               <ScrollArea className="flex-1 p-6">
                 <div className="space-y-3">
-                  {steps.filter(s => s.activityId === activeActivityId).map(step => (
-                    <div key={step.id} className="flex items-center justify-between p-3 rounded-xl border bg-white shadow-sm">
-                      <div className="flex items-center gap-3">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
-                          const next: StepStatus = step.status === 'completed' ? 'pending' : 'completed';
-                          updateStep(step.id, { status: next });
-                        }}>
-                          {step.status === 'completed' ? <CheckCircle2 className="h-5 w-5 text-emerald-500" /> : <Clock className="h-5 w-5 text-slate-300" />}
-                        </Button>
-                        <div>
-                          <p className={`text-sm font-medium ${step.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>{step.title}</p>
+                  {steps.filter(s => s.activityId === activeActivityId).length === 0 ? (
+                    <p className="text-center py-10 text-muted-foreground text-sm italic">Nenhum passo cadastrado ainda.</p>
+                  ) : steps.filter(s => s.activityId === activeActivityId).map(step => {
+                    const resp = members.find(m => m.id === step.responsibleMemberId)?.fullName;
+                    const isOverdue = new Date(step.dueDate) < new Date() && step.status !== 'completed';
+                    return (
+                      <div key={step.id} className="flex items-center justify-between p-3 rounded-xl border bg-white shadow-sm hover:shadow-md transition-all">
+                        <div className="flex items-center gap-3">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                            const next: StepStatus = step.status === 'completed' ? 'pending' : 'completed';
+                            updateStep(step.id, { status: next });
+                          }}>
+                            {step.status === 'completed' ? <CheckCircle2 className="h-5 w-5 text-emerald-500" /> : <Clock className="h-5 w-5 text-slate-300" />}
+                          </Button>
+                          <div>
+                            <p className={`text-sm font-medium ${step.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>{step.title}</p>
+                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
+                              <span className="flex items-center gap-1"><User className="h-2.5 w-2.5" /> {resp}</span>
+                              <span className={`flex items-center gap-1 ${isOverdue ? 'text-rose-500 font-bold' : ''}`}>
+                                <Calendar className="h-2.5 w-2.5" /> {new Date(step.dueDate).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
                         </div>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteStep(step.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteStep(step.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </ScrollArea>
             </div>
+            <DialogFooter className="p-4 border-t bg-muted/5">
+              <Button variant="secondary" onClick={() => setIsStepsDialogOpen(false)}>Fechar</Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

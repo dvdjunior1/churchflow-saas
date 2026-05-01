@@ -87,6 +87,8 @@ export function MembersPage() {
   const addMember = useDataStore(s => s.addMember);
   const updateMemberAction = useDataStore(s => s.updateMember);
   const deleteMemberAction = useDataStore(s => s.deleteMember);
+  const activities = useDataStore(s => s.activities);
+  const activitySteps = useDataStore(s => s.activitySteps);
   const allPositions = useDataStore(s => s.positions);
   const ministries = useDataStore(s => s.ministries);
   const ministryMembers = useDataStore(s => s.ministryMembers);
@@ -353,6 +355,12 @@ export function MembersPage() {
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
                             onClick={() => {
+                              const hasAssignments = activities.some(a => a.responsibleMemberId === member.id && a.status !== 'completed') ||
+                                                    activitySteps.some(s => s.responsibleMemberId === member.id && s.status !== 'completed');
+                              
+                              if (hasAssignments) {
+                                toast.warning('Este membro possui atividades ou tarefas pendentes sob sua responsabilidade.');
+                              }
                               if (confirm('Remover este registro?')) {
                                 deleteMemberAction(member.id);
                                 toast.success('Membro removido');

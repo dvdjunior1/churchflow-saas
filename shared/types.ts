@@ -90,3 +90,33 @@ export interface DashboardStats {
   growthData: { month: string; count: number }[];
   upcomingEvents: ChurchEvent[];
 }
+export type ActivityType = 'event' | 'meeting' | 'visit' | 'project' | 'service' | 'other';
+export type ActivityStatus = 'planned' | 'in_progress' | 'completed' | 'canceled';
+export type StepStatus = 'pending' | 'in_progress' | 'completed';
+export interface Activity {
+  id: string;
+  title: string;
+  description: string;
+  ministryId: string;
+  responsibleMemberId: string;
+  visibility: 'public' | 'private';
+  type: ActivityType;
+  status: ActivityStatus;
+  startDate: string;
+  endDate?: string;
+  location?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface ActivityStep {
+  id: string;
+  activityId: string;
+  title: string;
+  description?: string;
+  responsibleMemberId: string;
+  dueDate: string;
+  status: StepStatus;
+  createdAt: string;
+  updatedAt: string;
+}

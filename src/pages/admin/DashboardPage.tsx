@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Heart, ArrowUpRight, Calendar, Clock, MapPin, FileText } from 'lucide-react';
+import { Users, Heart, ArrowUpRight, Calendar, Clock, MapPin, FileText, ListTodo, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,34 +18,56 @@ export function DashboardPage() {
   const members = useDataStore(s => s.members);
   const ministries = useDataStore(s => s.ministries);
   const events = useDataStore(s => s.events);
+  const activities = useDataStore(s => s.activities);
+  const steps = useDataStore(s => s.activitySteps);
   const totalMembers = members.length;
   const totalMinistries = ministries.length;
   const upcomingEvents = events
     .filter(e => new Date(e.date) >= new Date())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 3);
-
+  const inProgressActivities = activities.filter(a => a.status === 'in_progress').length;
+  const completedActivities = activities.filter(a => a.status === 'completed').length;
+  const now = new Date();
+  const overdueSteps = steps.filter(s => new Date(s.dueDate) < now && s.status !== 'completed').length;
+  const nextActivities = activities
+    .filter(a => a.status === 'planned' || a.status === 'in_progress')
+    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+    .slice(0, 3);
   const currentMonthName = new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(new Date());
   const capitalizedMonth = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1).replace('.', '');
-
   const growthData = [
     { month: 'Jan', count: 120 }, { month: 'Fev', count: 135 }, { month: 'Mar', count: 150 },
     { month: 'Abr', count: 162 }, { month: 'Mai', count: 180 }, { month: capitalizedMonth, count: totalMembers }
   ];
   const metrics = [
     {
-      title: "Total de Membros",
+      title: "Membros",
       value: totalMembers,
       icon: Users,
-      trend: "Crescimento Local",
+      trend: "Total Ativos",
       color: "text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400"
     },
     {
-      title: "Ministérios Ativos",
+      title: "Ministérios",
       value: totalMinistries,
       icon: Heart,
-      trend: "Frentes de Trabalho",
+      trend: "Atuando",
       color: "text-rose-600 bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400"
+    },
+    {
+      title: "Em Progresso",
+      value: inProgressActivities,
+      icon: ListTodo,
+      trend: "Atividades Ativas",
+      color: "text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400"
+    },
+    {
+      title: "Atrasos",
+      value: overdueSteps,
+      icon: AlertTriangle,
+      trend: "Tarefas Pendentes",
+      color: overdueSteps > 0 ? "text-red-600 bg-red-100" : "text-slate-600 bg-slate-100"
     }
   ];
   return (
@@ -53,12 +75,12 @@ export function DashboardPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard Geral</h1>
-          <p className="text-muted-foreground">Visão imediata da congregação processada localmente.</p>
+          <p className="text-muted-foreground">Visão imediata da congregação e produtividade.</p>
         </div>
         <Link to="/admin/reports">
           <Button variant="outline">
             <FileText className="mr-2 h-4 w-4" />
-            Ver Relatórios Completos
+            Relatórios Completos
           </Button>
         </Link>
       </div>
@@ -66,7 +88,7 @@ export function DashboardPage() {
         {metrics.map((m, i) => (
           <Card key={i} className="hover:shadow-soft transition-all duration-200 border-slate-200">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{m.title}</CardTitle>
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{m.title}</CardTitle>
               <div className={`p-2 rounded-lg ${m.color}`}>
                 <m.icon className="h-4 w-4" />
               </div>
@@ -85,7 +107,7 @@ export function DashboardPage() {
         <Card className="lg:col-span-4 shadow-soft border-slate-200">
           <CardHeader>
             <CardTitle>Crescimento Local</CardTitle>
-            <CardDescription>Acompanhamento de novos cadastros ativos</CardDescription>
+            <CardDescription>Evolução da membresia nos últimos meses</CardDescription>
           </CardHeader>
           <CardContent className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -100,6 +122,35 @@ export function DashboardPage() {
           </CardContent>
         </Card>
         <div className="lg:col-span-3 space-y-6">
+          <Card className="shadow-soft border-slate-200">
+            <CardHeader className="pb-4"><CardTitle className="text-lg">Próximas Atividades</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {nextActivities.length === 0 ? (
+                <div className="py-8 text-center text-sm text-muted-foreground italic">Nenhuma atividade em andamento.</div>
+              ) : (
+                nextActivities.map((act) => {
+                  const mName = ministries.find(m => m.id === act.ministryId)?.name;
+                  return (
+                    <div key={act.id} className="group p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-soft transition-all">
+                      <div className="flex justify-between items-start mb-1">
+                        <h4 className="font-bold text-slate-900 text-sm truncate max-w-[180px]">{act.title}</h4>
+                        <Badge variant="outline" className="text-[9px] uppercase">{act.status}</Badge>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 opacity-70">
+                        <Badge variant="secondary" className="text-[9px] py-0">{mName}</Badge>
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                          <Calendar className="h-3 w-3" /> {new Date(act.startDate).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              <Link to="/admin/activities" className="block w-full">
+                <Button variant="ghost" className="w-full text-xs mt-2">Ver Todas Atividades</Button>
+              </Link>
+            </CardContent>
+          </Card>
           <Card className="shadow-soft border-slate-200">
             <CardHeader className="pb-4"><CardTitle className="text-lg">Próximos Eventos</CardTitle></CardHeader>
             <CardContent className="space-y-3">
@@ -119,15 +170,6 @@ export function DashboardPage() {
                   </div>
                 ))
               )}
-            </CardContent>
-          </Card>
-          <Card className="shadow-soft border-slate-200 bg-primary text-primary-foreground">
-            <CardHeader><CardTitle className="text-lg">Fluxo de Dados</CardTitle></CardHeader>
-            <CardContent>
-              <p className="text-sm opacity-80 mb-4">Seu sistema está operando com persistência local ativa. Todos os dados são salvos instantaneamente no seu navegador.</p>
-              <div className="flex items-center gap-2 text-xs font-mono">
-                <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" /> Sincronizado
-              </div>
             </CardContent>
           </Card>
         </div>

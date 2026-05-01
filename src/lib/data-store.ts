@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import type { Member, Ministry, MinistryMember, FinancialRecord, ChurchEvent, Position } from '@shared/types';
+import type { Member, Ministry, MinistryMember, FinancialRecord, ChurchEvent, Position, Activity, ActivityStep } from '@shared/types';
 interface DataState {
   members: Member[];
   ministries: Ministry[];
@@ -9,6 +9,8 @@ interface DataState {
   financialRecords: FinancialRecord[];
   events: ChurchEvent[];
   positions: Position[];
+  activities: Activity[];
+  activitySteps: ActivityStep[];
   lastUpdated: string;
   setMembers: (members: Member[]) => void;
   addMember: (member: Partial<Member>) => Member;
@@ -33,6 +35,12 @@ interface DataState {
   addEvent: (event: Omit<ChurchEvent, 'id'>) => ChurchEvent;
   updateEvent: (id: string, updates: Partial<ChurchEvent>) => void;
   deleteEvent: (id: string) => void;
+  addActivity: (activity: Omit<Activity, 'id' | 'createdAt' | 'updatedAt'>) => Activity;
+  updateActivity: (id: string, updates: Partial<Activity>) => void;
+  deleteActivity: (id: string) => void;
+  addActivityStep: (step: Omit<ActivityStep, 'id' | 'createdAt' | 'updatedAt'>) => ActivityStep;
+  updateActivityStep: (id: string, updates: Partial<ActivityStep>) => void;
+  deleteActivityStep: (id: string) => void;
   seedIfEmpty: () => void;
 }
 export const useDataStore = create<DataState>()(
@@ -44,6 +52,8 @@ export const useDataStore = create<DataState>()(
       financialRecords: [],
       events: [],
       positions: [],
+      activities: [],
+      activitySteps: [],
       lastUpdated: new Date().toISOString(),
       setMembers: (members) => set({ members, lastUpdated: new Date().toISOString() }),
       addMember: (data) => {
@@ -71,6 +81,7 @@ export const useDataStore = create<DataState>()(
       deleteMember: (id) => set((state) => ({
         members: state.members.filter(m => m.id !== id),
         ministryMembers: state.ministryMembers.filter(mm => mm.memberId !== id),
+        activitySteps: state.activitySteps.filter(s => s.responsibleMemberId !== id),
         lastUpdated: new Date().toISOString()
       })),
       setMinistries: (ministries) => set({ ministries, lastUpdated: new Date().toISOString() }),
@@ -86,6 +97,7 @@ export const useDataStore = create<DataState>()(
       deleteMinistry: (id) => set((state) => ({
         ministries: state.ministries.filter(m => m.id !== id),
         ministryMembers: state.ministryMembers.filter(mm => mm.ministryId !== id),
+        activities: state.activities.filter(a => a.ministryId !== id),
         lastUpdated: new Date().toISOString()
       })),
       setMinistryMembers: (items) => set({ ministryMembers: items, lastUpdated: new Date().toISOString() }),
@@ -148,24 +160,49 @@ export const useDataStore = create<DataState>()(
         events: state.events.filter(e => e.id !== id),
         lastUpdated: new Date().toISOString()
       })),
+      addActivity: (data) => {
+        const activity: Activity = {
+          ...data,
+          id: uuidv4(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        set((state) => ({ activities: [...state.activities, activity], lastUpdated: new Date().toISOString() }));
+        return activity;
+      },
+      updateActivity: (id, updates) => set((state) => ({
+        activities: state.activities.map(a => a.id === id ? { ...a, ...updates, updatedAt: new Date().toISOString() } : a),
+        lastUpdated: new Date().toISOString()
+      })),
+      deleteActivity: (id) => set((state) => ({
+        activities: state.activities.filter(a => a.id !== id),
+        activitySteps: state.activitySteps.filter(s => s.activityId !== id),
+        lastUpdated: new Date().toISOString()
+      })),
+      addActivityStep: (data) => {
+        const step: ActivityStep = {
+          ...data,
+          id: uuidv4(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        set((state) => ({ activitySteps: [...state.activitySteps, step], lastUpdated: new Date().toISOString() }));
+        return step;
+      },
+      updateActivityStep: (id, updates) => set((state) => ({
+        activitySteps: state.activitySteps.map(s => s.id === id ? { ...s, ...updates, updatedAt: new Date().toISOString() } : s),
+        lastUpdated: new Date().toISOString()
+      })),
+      deleteActivityStep: (id) => set((state) => ({
+        activitySteps: state.activitySteps.filter(s => s.id !== id),
+        lastUpdated: new Date().toISOString()
+      })),
       seedIfEmpty: () => {
         const state = get();
-        if (state.members.length > 0 || state.positions.length > 0) return;
+        if (state.members.length > 0 || state.activities.length > 0) return;
         const nowStr = new Date().toISOString();
-        const seedPositions: Position[] = [
-          { id: 'pos-p', name: 'Pastor', description: 'Liderança espiritual geral', scope: 'church', active: true, createdAt: nowStr, updatedAt: nowStr },
-          { id: 'pos-d', name: 'Diácono', description: 'Serviço e auxílio nas atividades', scope: 'church', active: true, createdAt: nowStr, updatedAt: nowStr },
-          { id: 'pos-s', name: 'Secretário(a)', description: 'Gestão documental e registros', scope: 'church', active: true, createdAt: nowStr, updatedAt: nowStr },
-          { id: 'pos-t', name: 'Tesoureiro(a)', description: 'Gestão financeira e balanços', scope: 'church', active: true, createdAt: nowStr, updatedAt: nowStr },
-          { id: 'pos-p-m', name: 'Presbítero', description: 'Conselho e doutrina', scope: 'church', active: true, createdAt: nowStr, updatedAt: nowStr },
-          { id: 'pos-l-l', name: 'Líder de Louvor', description: 'Coordenação da equipe de música', scope: 'ministry', active: true, createdAt: nowStr, updatedAt: nowStr },
-          { id: 'pos-i', name: 'Instrumentista', description: 'Músico da equipe', scope: 'ministry', active: true, createdAt: nowStr, updatedAt: nowStr },
-          { id: 'pos-m-k', name: 'Monitor Kids', description: 'Ensino bíblico infantil', scope: 'ministry', active: true, createdAt: nowStr, updatedAt: nowStr },
-          { id: 'pos-v', name: 'Vocalista', description: 'Backing vocal ou solista', scope: 'ministry', active: true, createdAt: nowStr, updatedAt: nowStr },
-          { id: 'pos-o-s', name: 'Operador de Som', description: 'Suporte técnico e áudio', scope: 'ministry', active: true, createdAt: nowStr, updatedAt: nowStr },
-        ];
-        // Use stable IDs to match LoginPage and backend seeds
-        const m1Id = 'm1'; 
+        // Use stable IDs
+        const m1Id = 'm1';
         const m2Id = 'm2';
         const min1Id = 'min1';
         const min2Id = 'min2';
@@ -204,19 +241,66 @@ export const useDataStore = create<DataState>()(
           { id: min1Id, name: "Louvor & Adoração", description: "Equipe de música", leaderId: m2Id },
           { id: min2Id, name: "Kids", description: "Ministério infantil" }
         ];
-        const seedMM: MinistryMember[] = [
-          { id: 'mm1', memberId: m2Id, ministryId: min1Id, role: 'leader', positionId: 'pos-l-l' },
-          { id: 'mm2', memberId: m1Id, ministryId: min2Id, role: 'member', positionId: 'pos-m-k' }
+        const a1Id = uuidv4();
+        const seedActivities: Activity[] = [
+          {
+            id: a1Id,
+            title: "Concerto de Primavera",
+            description: "Evento musical aberto à comunidade.",
+            ministryId: min1Id,
+            responsibleMemberId: m2Id,
+            visibility: 'public',
+            type: 'event',
+            status: 'in_progress',
+            startDate: new Date(Date.now() + 86400000 * 7).toISOString(),
+            createdAt: nowStr,
+            updatedAt: nowStr
+          },
+          {
+            id: uuidv4(),
+            title: "Reforma das Salas Kids",
+            description: "Pintura e novos móveis para o ministério infantil.",
+            ministryId: min2Id,
+            responsibleMemberId: m1Id,
+            visibility: 'private',
+            type: 'project',
+            status: 'planned',
+            startDate: new Date(Date.now() + 86400000 * 14).toISOString(),
+            createdAt: nowStr,
+            updatedAt: nowStr
+          }
+        ];
+        const seedSteps: ActivityStep[] = [
+          {
+            id: uuidv4(),
+            activityId: a1Id,
+            title: "Seleção do Repertório",
+            responsibleMemberId: m2Id,
+            dueDate: new Date(Date.now() + 86400000 * 2).toISOString(),
+            status: 'completed',
+            createdAt: nowStr,
+            updatedAt: nowStr
+          },
+          {
+            id: uuidv4(),
+            activityId: a1Id,
+            title: "Ensaio Geral",
+            responsibleMemberId: m2Id,
+            dueDate: new Date(Date.now() + 86400000 * 6).toISOString(),
+            status: 'pending',
+            createdAt: nowStr,
+            updatedAt: nowStr
+          }
         ];
         set({
-          positions: seedPositions,
           members: seedMembers,
           ministries: seedMinistries,
-          ministryMembers: seedMM,
+          activities: seedActivities,
+          activitySteps: seedSteps,
           lastUpdated: nowStr
         });
       }
     }),
-    { name: 'churchflow-local-storage-v2' }
+    { name: 'churchflow-local-storage-v21' }
   )
 );

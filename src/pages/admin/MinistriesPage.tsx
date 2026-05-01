@@ -29,6 +29,7 @@ export function MinistriesPage() {
   const [assignMemberId, setAssignMemberId] = useState<string>("");
   const [assignPositionId, setAssignPositionId] = useState<string>("none");
   const ministries = useDataStore(s => s.ministries);
+  const activities = useDataStore(s => s.activities);
   const addMinistryAction = useDataStore(s => s.addMinistry);
   const deleteMinistryAction = useDataStore(s => s.deleteMinistry);
   const updateMinistryAction = useDataStore(s => s.updateMinistry);
@@ -193,6 +194,11 @@ export function MinistriesPage() {
                       size="icon"
                       className="h-7 w-7 text-muted-foreground hover:text-destructive"
                       onClick={() => {
+                        const hasActivities = activities.some(a => a.ministryId === min.id);
+                        if (hasActivities) {
+                          toast.warning('Este ministério possui atividades vinculadas que serão afetadas.');
+                        }
+
                         if (confirm('Deseja excluir este ministério?')) {
                           deleteMinistryAction(min.id);
                           toast.success('Ministério excluído');

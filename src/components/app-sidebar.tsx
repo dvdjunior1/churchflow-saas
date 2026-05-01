@@ -11,6 +11,7 @@ import {
   Banknote,
   Calendar,
   FileBarChart,
+  ListTodo,
   Wallet,
   Briefcase
 } from "lucide-react";
@@ -50,6 +51,7 @@ export function AppSidebar(): JSX.Element {
     { title: "Membros", icon: Users, url: "/admin/members" },
     { title: "Cargos", icon: Briefcase, url: "/admin/positions" },
     { title: "Ministérios", icon: Heart, url: "/admin/ministries" },
+    { title: "Atividades", icon: ListTodo, url: "/admin/activities" },
     { title: "Agenda", icon: Calendar, url: "/admin/events" },
     { title: "Financeiro", icon: Banknote, url: "/admin/finance" },
     { title: "Relatórios", icon: FileBarChart, url: "/admin/reports" },
