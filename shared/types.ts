@@ -11,10 +11,10 @@ export interface AuthUser {
 }
 export interface Member {
   id: string;
-  name: string;
+  fullName: string;
   email: string;
   phone: string;
-  avatarUrl: string;
+  photoUrl: string;
   birthDate: string; // ISO
   baptismDate?: string; // ISO
   role: string;
@@ -25,9 +25,13 @@ export interface Ministry {
   name: string;
   description: string;
   leaderId?: string; // Member ID
-  memberIds: string[]; // List of Member IDs
 }
-// Utility for mocking
+export interface MinistryMember {
+  id: string;
+  memberId: string;
+  ministryId: string;
+  role: 'leader' | 'member';
+}
 export interface DashboardStats {
   totalMembers: number;
   totalMinistries: number;

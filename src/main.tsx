@@ -1,13 +1,11 @@
 import '@/lib/errorReporter';
 import { enableMapSet } from "immer";
 enableMapSet();
-import React, { StrictMode, useEffect } from 'react'
+import React, { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   createBrowserRouter,
-  RouterProvider,
-  Navigate,
-  Outlet
+  RouterProvider
 } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -18,18 +16,8 @@ import { LoginPage } from '@/pages/auth/LoginPage'
 import { DashboardPage } from '@/pages/admin/DashboardPage'
 import { MembersPage } from '@/pages/admin/MembersPage'
 import { MinistriesPage } from '@/pages/admin/MinistriesPage'
-import { AppLayout } from '@/components/layout/AppLayout'
-import { useAuthStore } from '@/lib/auth-store'
+import { AuthGuard } from '@/components/auth/AuthGuard'
 const queryClient = new QueryClient();
-const AuthGuard = () => {
-  const user = useAuthStore(s => s.user);
-  if (!user) return <Navigate to="/login" replace />;
-  return (
-    <AppLayout container>
-      <Outlet />
-    </AppLayout>
-  );
-};
 const router = createBrowserRouter([
   {
     path: "/",
