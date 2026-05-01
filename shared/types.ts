@@ -13,7 +13,7 @@ export interface AuthUser {
 export interface Position {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   scope: 'church' | 'ministry';
   active: boolean;
   createdAt: string;

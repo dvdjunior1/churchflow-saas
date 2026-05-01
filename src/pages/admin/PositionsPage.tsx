@@ -52,7 +52,7 @@ const positionSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
   description: z.string().optional(),
   scope: z.enum(['church', 'ministry']),
-  active: z.boolean().default(true),
+  active: z.boolean(),
 });
 type FormValues = z.infer<typeof positionSchema>;
 export function PositionsPage() {
@@ -76,10 +76,19 @@ export function PositionsPage() {
   const onSubmit: SubmitHandler<FormValues> = (values) => {
     try {
       if (editingPos) {
-        updatePosition(editingPos.id, values);
+        updatePosition(editingPos.id, {
+          name: values.name,
+          description: values.description,
+          scope: values.scope,
+          active: values.active,
+        });
         toast.success('Cargo atualizado com sucesso');
       } else {
-        addPosition(values);
+        addPosition({
+          name: values.name,
+          description: values.description,
+          scope: values.scope,
+        });
         toast.success('Cargo criado com sucesso');
       }
       setIsDialogOpen(false);
@@ -93,15 +102,15 @@ export function PositionsPage() {
     setEditingPos(pos);
     form.reset({
       name: pos.name,
-      description: pos.description,
+      description: pos.description || '',
       scope: pos.scope,
       active: pos.active,
     });
     setIsDialogOpen(true);
   };
   const filteredPositions = positions.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
-                          p.description.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
+                          (p.description?.toLowerCase() || '').includes(search.toLowerCase());
     const matchesScope = scopeFilter === 'all' || p.scope === scopeFilter;
     return matchesSearch && matchesScope;
   });
@@ -128,7 +137,7 @@ export function PositionsPage() {
           />
         </div>
         <div className="flex gap-2">
-          <Select value={scopeFilter} onValueChange={(val: any) => setScopeFilter(val)}>
+          <Select value={scopeFilter} onValueChange={(val: 'all' | 'church' | 'ministry') => setScopeFilter(val)}>
             <SelectTrigger className="w-[180px]">
               <Filter className="mr-2 h-4 w-4" />
               <SelectValue placeholder="Escopo" />
@@ -193,7 +202,7 @@ export function PositionsPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleEdit(pos)}>Editar</DropdownMenuItem>
                         {pos.active ? (
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
                             onClick={() => {
                               if (confirm('Deseja desativar este cargo? Ele não poderá ser mais selecionado em novos cadastros.')) {

@@ -211,7 +211,7 @@ export function MinistriesPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src={m.photoUrl} />
+                            <AvatarImage src={m.photoUrl} alt={m.fullName} />
                             <AvatarFallback>{m.fullName.substring(0,2).toUpperCase()}</AvatarFallback>
                           </Avatar>
                           <div className="flex flex-col">
@@ -236,7 +236,7 @@ export function MinistriesPage() {
                         <div className="grid grid-cols-2 gap-2 pt-2 border-t">
                           <div className="flex items-center gap-2">
                              <Button
-                              size="xs"
+                              size="sm"
                               variant="ghost"
                               className={`h-7 px-2 text-[10px] ${isLeader ? 'text-primary' : 'text-slate-400'}`}
                               onClick={() => {

@@ -10,7 +10,6 @@ interface DataState {
   events: ChurchEvent[];
   positions: Position[];
   lastUpdated: string;
-  // Actions
   setMembers: (members: Member[]) => void;
   addMember: (member: Partial<Member>) => Member;
   updateMember: (id: string, updates: Partial<Member>) => void;
@@ -106,7 +105,9 @@ export const useDataStore = create<DataState>()(
       setPositions: (positions) => set({ positions, lastUpdated: new Date().toISOString() }),
       addPosition: (data) => {
         const pos: Position = {
-          ...data,
+          name: data.name,
+          scope: data.scope,
+          description: data.description,
           id: uuidv4(),
           active: true,
           createdAt: new Date().toISOString(),
@@ -151,15 +152,12 @@ export const useDataStore = create<DataState>()(
         const state = get();
         if (state.members.length > 0 || state.positions.length > 0) return;
         const nowStr = new Date().toISOString();
-        // Seed Positions
         const seedPositions: Position[] = [
-          // Church Scope
           { id: 'pos-p', name: 'Pastor', description: 'Liderança espiritual geral', scope: 'church', active: true, createdAt: nowStr, updatedAt: nowStr },
           { id: 'pos-d', name: 'Diácono', description: 'Serviço e auxílio nas atividades', scope: 'church', active: true, createdAt: nowStr, updatedAt: nowStr },
           { id: 'pos-s', name: 'Secretário(a)', description: 'Gestão documental e registros', scope: 'church', active: true, createdAt: nowStr, updatedAt: nowStr },
           { id: 'pos-t', name: 'Tesoureiro(a)', description: 'Gestão financeira e balanços', scope: 'church', active: true, createdAt: nowStr, updatedAt: nowStr },
           { id: 'pos-p-m', name: 'Presbítero', description: 'Conselho e doutrina', scope: 'church', active: true, createdAt: nowStr, updatedAt: nowStr },
-          // Ministry Scope
           { id: 'pos-l-l', name: 'Líder de Louvor', description: 'Coordenação da equipe de música', scope: 'ministry', active: true, createdAt: nowStr, updatedAt: nowStr },
           { id: 'pos-i', name: 'Instrumentista', description: 'Músico da equipe', scope: 'ministry', active: true, createdAt: nowStr, updatedAt: nowStr },
           { id: 'pos-m-k', name: 'Monitor Kids', description: 'Ensino bíblico infantil', scope: 'ministry', active: true, createdAt: nowStr, updatedAt: nowStr },
