@@ -18,7 +18,6 @@ import MemberDashboardPage from '@/pages/member/MemberDashboardPage';
 import MemberDonationsPage from '@/pages/member/MemberDonationsPage';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { useDataStore } from '@/lib/data-store';
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -66,10 +65,12 @@ const router = createBrowserRouter([
   }
 ]);
 export default function App() {
+  const seedIfEmpty = useDataStore(s => s.seedIfEmpty);
   useEffect(() => {
-    const { seedIfEmpty } = useDataStore.getState();
+    // Triggers granular seeding and migration logic on initial mount
     seedIfEmpty();
-  }, []);
+    console.info('ChurchFlow: Persistent Data Architecture initialized.');
+  }, [seedIfEmpty]);
   return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>

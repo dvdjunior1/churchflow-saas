@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
 import { v4 as uuidv4 } from 'uuid';
 import type { Member, Ministry, MinistryMember, FinancialRecord, ChurchEvent, Position, Activity, ActivityStep } from '@shared/types';
 interface DataState {
@@ -43,9 +44,22 @@ interface DataState {
   deleteActivityStep: (id: string) => void;
   seedIfEmpty: () => void;
 }
+const STORAGE_KEY = 'churchflow-data-v1';
+const LEGACY_KEY = 'churchflow-local-storage-v21';
+// Migration helper: Move data from legacy key to new key if it exists
+const migrateLegacyData = () => {
+  if (typeof window === 'undefined') return;
+  const legacy = localStorage.getItem(LEGACY_KEY);
+  const current = localStorage.getItem(STORAGE_KEY);
+  if (legacy && !current) {
+    localStorage.setItem(STORAGE_KEY, legacy);
+    console.warn('Migration: Legacy data moved to churchflow-data-v1');
+  }
+};
+migrateLegacyData();
 export const useDataStore = create<DataState>()(
   persist(
-    (set, get) => ({
+    immer((set, get) => ({
       members: [],
       ministries: [],
       ministryMembers: [],
@@ -55,66 +69,97 @@ export const useDataStore = create<DataState>()(
       activities: [],
       activitySteps: [],
       lastUpdated: new Date().toISOString(),
-      setMembers: (members) => set({ members, lastUpdated: new Date().toISOString() }),
+      setMembers: (members) => set((state) => {
+        state.members = members;
+        state.lastUpdated = new Date().toISOString();
+      }),
       addMember: (data) => {
+        const id = uuidv4();
         const member: Member = {
           fullName: "",
           email: "",
           phone: "",
-          photoUrl: "",
+          photoUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`,
           birthDate: "",
           role: "Membro",
           positions: [],
           memberStatus: "ativo",
           showBirthdayPublic: false,
           ...data,
-          id: uuidv4(),
+          id,
           joinedAt: new Date().toISOString(),
         } as Member;
-        set((state) => ({ members: [...state.members, member], lastUpdated: new Date().toISOString() }));
+        set((state) => {
+          state.members.push(member);
+          state.lastUpdated = new Date().toISOString();
+        });
         return member;
       },
-      updateMember: (id, updates) => set((state) => ({
-        members: state.members.map(m => m.id === id ? { ...m, ...updates } : m),
-        lastUpdated: new Date().toISOString()
-      })),
-      deleteMember: (id) => set((state) => ({
-        members: state.members.filter(m => m.id !== id),
-        ministryMembers: state.ministryMembers.filter(mm => mm.memberId !== id),
-        activitySteps: state.activitySteps.filter(s => s.responsibleMemberId !== id),
-        lastUpdated: new Date().toISOString()
-      })),
-      setMinistries: (ministries) => set({ ministries, lastUpdated: new Date().toISOString() }),
+      updateMember: (id, updates) => set((state) => {
+        const index = state.members.findIndex(m => m.id === id);
+        if (index !== -1) {
+          state.members[index] = { ...state.members[index], ...updates };
+          state.lastUpdated = new Date().toISOString();
+        }
+      }),
+      deleteMember: (id) => set((state) => {
+        state.members = state.members.filter(m => m.id !== id);
+        state.ministryMembers = state.ministryMembers.filter(mm => mm.memberId !== id);
+        state.activitySteps = state.activitySteps.filter(s => s.responsibleMemberId !== id);
+        state.lastUpdated = new Date().toISOString();
+      }),
+      setMinistries: (ministries) => set((state) => {
+        state.ministries = ministries;
+        state.lastUpdated = new Date().toISOString();
+      }),
       addMinistry: (data) => {
         const ministry: Ministry = { ...data, id: uuidv4() };
-        set((state) => ({ ministries: [...state.ministries, ministry], lastUpdated: new Date().toISOString() }));
+        set((state) => {
+          state.ministries.push(ministry);
+          state.lastUpdated = new Date().toISOString();
+        });
         return ministry;
       },
-      updateMinistry: (id, updates) => set((state) => ({
-        ministries: state.ministries.map(m => m.id === id ? { ...m, ...updates } : m),
-        lastUpdated: new Date().toISOString()
-      })),
-      deleteMinistry: (id) => set((state) => ({
-        ministries: state.ministries.filter(m => m.id !== id),
-        ministryMembers: state.ministryMembers.filter(mm => mm.ministryId !== id),
-        activities: state.activities.filter(a => a.ministryId !== id),
-        lastUpdated: new Date().toISOString()
-      })),
-      setMinistryMembers: (items) => set({ ministryMembers: items, lastUpdated: new Date().toISOString() }),
+      updateMinistry: (id, updates) => set((state) => {
+        const index = state.ministries.findIndex(m => m.id === id);
+        if (index !== -1) {
+          state.ministries[index] = { ...state.ministries[index], ...updates };
+          state.lastUpdated = new Date().toISOString();
+        }
+      }),
+      deleteMinistry: (id) => set((state) => {
+        state.ministries = state.ministries.filter(m => m.id !== id);
+        state.ministryMembers = state.ministryMembers.filter(mm => mm.ministryId !== id);
+        state.activities = state.activities.filter(a => a.ministryId !== id);
+        state.lastUpdated = new Date().toISOString();
+      }),
+      setMinistryMembers: (items) => set((state) => {
+        state.ministryMembers = items;
+        state.lastUpdated = new Date().toISOString();
+      }),
       linkMember: (data) => {
         const mm: MinistryMember = { ...data, id: uuidv4() };
-        set((state) => ({ ministryMembers: [...state.ministryMembers, mm], lastUpdated: new Date().toISOString() }));
+        set((state) => {
+          state.ministryMembers.push(mm);
+          state.lastUpdated = new Date().toISOString();
+        });
         return mm;
       },
-      unlinkMember: (id) => set((state) => ({
-        ministryMembers: state.ministryMembers.filter(mm => mm.id !== id),
-        lastUpdated: new Date().toISOString()
-      })),
-      updateMinistryMember: (id, updates) => set((state) => ({
-        ministryMembers: state.ministryMembers.map(mm => mm.id === id ? { ...mm, ...updates } : mm),
-        lastUpdated: new Date().toISOString()
-      })),
-      setPositions: (positions) => set({ positions, lastUpdated: new Date().toISOString() }),
+      unlinkMember: (id) => set((state) => {
+        state.ministryMembers = state.ministryMembers.filter(mm => mm.id !== id);
+        state.lastUpdated = new Date().toISOString();
+      }),
+      updateMinistryMember: (id, updates) => set((state) => {
+        const index = state.ministryMembers.findIndex(mm => mm.id === id);
+        if (index !== -1) {
+          state.ministryMembers[index] = { ...state.ministryMembers[index], ...updates };
+          state.lastUpdated = new Date().toISOString();
+        }
+      }),
+      setPositions: (positions) => set((state) => {
+        state.positions = positions;
+        state.lastUpdated = new Date().toISOString();
+      }),
       addPosition: (data) => {
         const pos: Position = {
           name: data.name,
@@ -125,41 +170,70 @@ export const useDataStore = create<DataState>()(
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
-        set((state) => ({ positions: [...state.positions, pos], lastUpdated: new Date().toISOString() }));
+        set((state) => {
+          state.positions.push(pos);
+          state.lastUpdated = new Date().toISOString();
+        });
         return pos;
       },
-      updatePosition: (id, updates) => set((state) => ({
-        positions: state.positions.map(p => p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p),
-        lastUpdated: new Date().toISOString()
-      })),
-      deactivatePosition: (id) => set((state) => ({
-        positions: state.positions.map(p => p.id === id ? { ...p, active: false, updatedAt: new Date().toISOString() } : p),
-        lastUpdated: new Date().toISOString()
-      })),
-      setFinancialRecords: (records) => set({ financialRecords: records, lastUpdated: new Date().toISOString() }),
+      updatePosition: (id, updates) => set((state) => {
+        const index = state.positions.findIndex(p => p.id === id);
+        if (index !== -1) {
+          state.positions[index] = { 
+            ...state.positions[index], 
+            ...updates, 
+            updatedAt: new Date().toISOString() 
+          };
+          state.lastUpdated = new Date().toISOString();
+        }
+      }),
+      deactivatePosition: (id) => set((state) => {
+        const index = state.positions.findIndex(p => p.id === id);
+        if (index !== -1) {
+          state.positions[index].active = false;
+          state.positions[index].updatedAt = new Date().toISOString();
+          state.lastUpdated = new Date().toISOString();
+        }
+      }),
+      setFinancialRecords: (records) => set((state) => {
+        state.financialRecords = records;
+        state.lastUpdated = new Date().toISOString();
+      }),
       addFinancialRecord: (data) => {
         const record: FinancialRecord = { ...data, id: uuidv4() };
-        set((state) => ({ financialRecords: [record, ...state.financialRecords], lastUpdated: new Date().toISOString() }));
+        set((state) => {
+          state.financialRecords.unshift(record);
+          state.lastUpdated = new Date().toISOString();
+        });
         return record;
       },
-      deleteFinancialRecord: (id) => set((state) => ({
-        financialRecords: state.financialRecords.filter(r => r.id !== id),
-        lastUpdated: new Date().toISOString()
-      })),
-      setEvents: (events) => set({ events, lastUpdated: new Date().toISOString() }),
+      deleteFinancialRecord: (id) => set((state) => {
+        state.financialRecords = state.financialRecords.filter(r => r.id !== id);
+        state.lastUpdated = new Date().toISOString();
+      }),
+      setEvents: (events) => set((state) => {
+        state.events = events;
+        state.lastUpdated = new Date().toISOString();
+      }),
       addEvent: (data) => {
         const event: ChurchEvent = { ...data, id: uuidv4() };
-        set((state) => ({ events: [...state.events, event], lastUpdated: new Date().toISOString() }));
+        set((state) => {
+          state.events.push(event);
+          state.lastUpdated = new Date().toISOString();
+        });
         return event;
       },
-      updateEvent: (id, updates) => set((state) => ({
-        events: state.events.map(e => e.id === id ? { ...e, ...updates } : e),
-        lastUpdated: new Date().toISOString()
-      })),
-      deleteEvent: (id) => set((state) => ({
-        events: state.events.filter(e => e.id !== id),
-        lastUpdated: new Date().toISOString()
-      })),
+      updateEvent: (id, updates) => set((state) => {
+        const index = state.events.findIndex(e => e.id === id);
+        if (index !== -1) {
+          state.events[index] = { ...state.events[index], ...updates };
+          state.lastUpdated = new Date().toISOString();
+        }
+      }),
+      deleteEvent: (id) => set((state) => {
+        state.events = state.events.filter(e => e.id !== id);
+        state.lastUpdated = new Date().toISOString();
+      }),
       addActivity: (data) => {
         const activity: Activity = {
           ...data,
@@ -167,18 +241,28 @@ export const useDataStore = create<DataState>()(
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
-        set((state) => ({ activities: [...state.activities, activity], lastUpdated: new Date().toISOString() }));
+        set((state) => {
+          state.activities.push(activity);
+          state.lastUpdated = new Date().toISOString();
+        });
         return activity;
       },
-      updateActivity: (id, updates) => set((state) => ({
-        activities: state.activities.map(a => a.id === id ? { ...a, ...updates, updatedAt: new Date().toISOString() } : a),
-        lastUpdated: new Date().toISOString()
-      })),
-      deleteActivity: (id) => set((state) => ({
-        activities: state.activities.filter(a => a.id !== id),
-        activitySteps: state.activitySteps.filter(s => s.activityId !== id),
-        lastUpdated: new Date().toISOString()
-      })),
+      updateActivity: (id, updates) => set((state) => {
+        const index = state.activities.findIndex(a => a.id === id);
+        if (index !== -1) {
+          state.activities[index] = { 
+            ...state.activities[index], 
+            ...updates, 
+            updatedAt: new Date().toISOString() 
+          };
+          state.lastUpdated = new Date().toISOString();
+        }
+      }),
+      deleteActivity: (id) => set((state) => {
+        state.activities = state.activities.filter(a => a.id !== id);
+        state.activitySteps = state.activitySteps.filter(s => s.activityId !== id);
+        state.lastUpdated = new Date().toISOString();
+      }),
       addActivityStep: (data) => {
         const step: ActivityStep = {
           ...data,
@@ -186,121 +270,122 @@ export const useDataStore = create<DataState>()(
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
-        set((state) => ({ activitySteps: [...state.activitySteps, step], lastUpdated: new Date().toISOString() }));
+        set((state) => {
+          state.activitySteps.push(step);
+          state.lastUpdated = new Date().toISOString();
+        });
         return step;
       },
-      updateActivityStep: (id, updates) => set((state) => ({
-        activitySteps: state.activitySteps.map(s => s.id === id ? { ...s, ...updates, updatedAt: new Date().toISOString() } : s),
-        lastUpdated: new Date().toISOString()
-      })),
-      deleteActivityStep: (id) => set((state) => ({
-        activitySteps: state.activitySteps.filter(s => s.id !== id),
-        lastUpdated: new Date().toISOString()
-      })),
+      updateActivityStep: (id, updates) => set((state) => {
+        const index = state.activitySteps.findIndex(s => s.id === id);
+        if (index !== -1) {
+          state.activitySteps[index] = { 
+            ...state.activitySteps[index], 
+            ...updates, 
+            updatedAt: new Date().toISOString() 
+          };
+          state.lastUpdated = new Date().toISOString();
+        }
+      }),
+      deleteActivityStep: (id) => set((state) => {
+        state.activitySteps = state.activitySteps.filter(s => s.id !== id);
+        state.lastUpdated = new Date().toISOString();
+      }),
       seedIfEmpty: () => {
-        const state = get();
-        if (state.members.length > 0 || state.activities.length > 0) return;
         const nowStr = new Date().toISOString();
-        // Use stable IDs
-        const m1Id = 'm1';
-        const m2Id = 'm2';
-        const min1Id = 'min1';
-        const min2Id = 'min2';
-        const seedMembers: Member[] = [
-          {
-            id: m1Id,
-            fullName: "João Silva",
-            email: "joao@example.com",
-            phone: "11999998888",
-            photoUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Joao",
-            birthDate: "1985-05-15",
-            baptismDate: "2010-10-20",
-            role: "Pastor",
-            positions: ['pos-p'],
-            joinedAt: nowStr,
-            memberStatus: "ativo",
-            city: "São Paulo",
-            state: "SP"
-          },
-          {
-            id: m2Id,
-            fullName: "Maria Oliveira",
-            email: "maria@example.com",
-            phone: "11888887777",
-            photoUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maria",
-            birthDate: "1992-08-22",
-            role: "Líder de Louvor",
-            positions: ['pos-d'],
-            joinedAt: nowStr,
-            memberStatus: "ativo",
-            city: "Rio de Janeiro",
-            state: "RJ"
+        set((state) => {
+          // 1. Seed Positions independently
+          if (state.positions.length === 0) {
+            const seedPos: Position[] = [
+              { id: 'pos-pastor', name: 'Pastor', scope: 'church', active: true, createdAt: nowStr, updatedAt: nowStr },
+              { id: 'pos-diacono', name: 'Diácono', scope: 'church', active: true, createdAt: nowStr, updatedAt: nowStr },
+              { id: 'pos-presbitero', name: 'Presbítero', scope: 'church', active: true, createdAt: nowStr, updatedAt: nowStr },
+              { id: 'pos-lider', name: 'Líder de Ministério', scope: 'ministry', active: true, createdAt: nowStr, updatedAt: nowStr },
+              { id: 'pos-tesoureiro', name: 'Tesoureiro', scope: 'church', active: true, createdAt: nowStr, updatedAt: nowStr },
+            ];
+            state.positions = seedPos;
           }
-        ];
-        const seedMinistries: Ministry[] = [
-          { id: min1Id, name: "Louvor & Adoração", description: "Equipe de música", leaderId: m2Id },
-          { id: min2Id, name: "Kids", description: "Ministério infantil" }
-        ];
-        const a1Id = uuidv4();
-        const seedActivities: Activity[] = [
-          {
-            id: a1Id,
-            title: "Concerto de Primavera",
-            description: "Evento musical aberto à comunidade.",
-            ministryId: min1Id,
-            responsibleMemberId: m2Id,
-            visibility: 'public',
-            type: 'event',
-            status: 'in_progress',
-            startDate: new Date(Date.now() + 86400000 * 7).toISOString(),
-            createdAt: nowStr,
-            updatedAt: nowStr
-          },
-          {
-            id: uuidv4(),
-            title: "Reforma das Salas Kids",
-            description: "Pintura e novos móveis para o ministério infantil.",
-            ministryId: min2Id,
-            responsibleMemberId: m1Id,
-            visibility: 'private',
-            type: 'project',
-            status: 'planned',
-            startDate: new Date(Date.now() + 86400000 * 14).toISOString(),
-            createdAt: nowStr,
-            updatedAt: nowStr
+          // 2. Seed Members independently
+          if (state.members.length === 0) {
+            const seedMembers: Member[] = [
+              {
+                id: 'm1',
+                fullName: "João Silva",
+                email: "joao@example.com",
+                phone: "11999998888",
+                photoUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Joao",
+                birthDate: "1985-05-15",
+                baptismDate: "2010-10-20",
+                role: "Pastor",
+                positions: ['pos-pastor'],
+                joinedAt: nowStr,
+                memberStatus: "ativo",
+                city: "São Paulo",
+                state: "SP"
+              },
+              {
+                id: 'm2',
+                fullName: "Maria Oliveira",
+                email: "maria@example.com",
+                phone: "11888887777",
+                photoUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maria",
+                birthDate: "1992-08-22",
+                role: "Líder de Louvor",
+                positions: ['pos-lider'],
+                joinedAt: nowStr,
+                memberStatus: "ativo",
+                city: "Rio de Janeiro",
+                state: "RJ"
+              }
+            ];
+            state.members = seedMembers;
           }
-        ];
-        const seedSteps: ActivityStep[] = [
-          {
-            id: uuidv4(),
-            activityId: a1Id,
-            title: "Seleção do Repertório",
-            responsibleMemberId: m2Id,
-            dueDate: new Date(Date.now() + 86400000 * 2).toISOString(),
-            status: 'completed',
-            createdAt: nowStr,
-            updatedAt: nowStr
-          },
-          {
-            id: uuidv4(),
-            activityId: a1Id,
-            title: "Ensaio Geral",
-            responsibleMemberId: m2Id,
-            dueDate: new Date(Date.now() + 86400000 * 6).toISOString(),
-            status: 'pending',
-            createdAt: nowStr,
-            updatedAt: nowStr
+          // 3. Seed Ministries independently
+          if (state.ministries.length === 0) {
+            const seedMinistries: Ministry[] = [
+              { id: 'min1', name: "Louvor & Adoração", description: "Equipe de música", leaderId: 'm2' },
+              { id: 'min2', name: "Kids", description: "Ministério infantil" }
+            ];
+            state.ministries = seedMinistries;
           }
-        ];
-        set({
-          members: seedMembers,
-          ministries: seedMinistries,
-          activities: seedActivities,
-          activitySteps: seedSteps,
-          lastUpdated: nowStr
+          // 4. Seed Activities independently
+          if (state.activities.length === 0) {
+            const a1Id = uuidv4();
+            state.activities = [
+              {
+                id: a1Id,
+                title: "Concerto de Primavera",
+                description: "Evento musical aberto à comunidade.",
+                ministryId: 'min1',
+                responsibleMemberId: 'm2',
+                visibility: 'public',
+                type: 'event',
+                status: 'in_progress',
+                startDate: new Date(Date.now() + 86400000 * 7).toISOString(),
+                createdAt: nowStr,
+                updatedAt: nowStr
+              }
+            ];
+            state.activitySteps = [
+              {
+                id: uuidv4(),
+                activityId: a1Id,
+                title: "Seleção do Repertório",
+                responsibleMemberId: 'm2',
+                dueDate: new Date(Date.now() + 86400000 * 2).toISOString(),
+                status: 'completed',
+                createdAt: nowStr,
+                updatedAt: nowStr
+              }
+            ];
+          }
+          state.lastUpdated = new Date().toISOString();
         });
       }
-    }),
-    { name: 'churchflow-local-storage-v21' }
+    })),
+    { 
+      name: STORAGE_KEY,
+      storage: createJSONStorage(() => localStorage),
+    }
   )
 );

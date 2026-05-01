@@ -15,23 +15,22 @@ import {
   ResponsiveContainer
 } from 'recharts';
 export function DashboardPage() {
-  const members = useDataStore(s => s.members);
-  const ministries = useDataStore(s => s.ministries);
-  const events = useDataStore(s => s.events);
-  const activities = useDataStore(s => s.activities);
-  const steps = useDataStore(s => s.activitySteps);
+  const members = useDataStore(s => s.members) || [];
+  const ministries = useDataStore(s => s.ministries) || [];
+  const events = useDataStore(s => s.events) || [];
+  const activities = useDataStore(s => s.activities) || [];
+  const steps = useDataStore(s => s.activitySteps) || [];
   const totalMembers = members.length;
   const totalMinistries = ministries.length;
   const upcomingEvents = events
-    .filter(e => new Date(e.date) >= new Date())
+    .filter(e => e && e.date && new Date(e.date) >= new Date())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 3);
-  const inProgressActivities = activities.filter(a => a.status === 'in_progress').length;
-  const completedActivities = activities.filter(a => a.status === 'completed').length;
+  const inProgressActivities = activities.filter(a => a?.status === 'in_progress').length;
   const now = new Date();
-  const overdueSteps = steps.filter(s => new Date(s.dueDate) < now && s.status !== 'completed').length;
+  const overdueSteps = steps.filter(s => s?.dueDate && new Date(s.dueDate) < now && s.status !== 'completed').length;
   const nextActivities = activities
-    .filter(a => a.status === 'planned' || a.status === 'in_progress')
+    .filter(a => a && (a.status === 'planned' || a.status === 'in_progress'))
     .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
     .slice(0, 3);
   const currentMonthName = new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(new Date());
@@ -137,9 +136,9 @@ export function DashboardPage() {
                         <Badge variant="outline" className="text-[9px] uppercase">{act.status}</Badge>
                       </div>
                       <div className="flex items-center gap-2 mt-1 opacity-70">
-                        <Badge variant="secondary" className="text-[9px] py-0">{mName}</Badge>
+                        <Badge variant="secondary" className="text-[9px] py-0">{mName || 'Geral'}</Badge>
                         <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                          <Calendar className="h-3 w-3" /> {new Date(act.startDate).toLocaleDateString()}
+                          <Calendar className="h-3 w-3" /> {act.startDate ? new Date(act.startDate).toLocaleDateString() : '---'}
                         </span>
                       </div>
                     </div>

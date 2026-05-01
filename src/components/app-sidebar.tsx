@@ -105,7 +105,7 @@ export function AppSidebar(): JSX.Element {
           </SidebarMenu>
         </SidebarGroup>
         <div className="px-6 py-2 text-[10px] text-muted-foreground/40 font-mono tracking-tighter">
-          v1.1.0-pos
+          v1.2.0-stable
         </div>
       </SidebarContent>
       <SidebarFooter className="p-4 border-t border-slate-200">
