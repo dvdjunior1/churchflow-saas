@@ -55,15 +55,19 @@ export default function ProfilePage() {
       return;
     }
     setIsSaving(true);
+    // Optimistic Update locally
+    updateMember(user.memberId, values);
     try {
-      const updated = await api(`/api/members/self/${user.memberId}`, {
+      // Background Sync with Worker
+      await api(`/api/members/self/${user.memberId}`, {
         method: 'PUT',
         body: JSON.stringify(values),
       });
-      updateMember(user.memberId, updated as any);
-      toast.success("Perfil atualizado com sucesso!");
+      toast.success("Perfil atualizado e sincronizado!");
     } catch (error) {
-      toast.error("Falha ao atualizar perfil.");
+      // Fallback: We already updated local state, so we just inform the user that sync failed
+      console.error("Sync failed, but local state updated", error);
+      toast.info("Alterações salvas localmente (Sincronização pendente).");
     } finally {
       setIsSaving(false);
     }
@@ -75,7 +79,7 @@ export default function ProfilePage() {
           <Avatar className="h-32 w-32 border-4 border-background shadow-xl">
             <AvatarImage src={form.watch('photoUrl')} />
             <AvatarFallback className="text-3xl bg-primary text-primary-foreground">
-              {user?.name.substring(0, 2).toUpperCase()}
+              {user?.name?.substring(0, 2).toUpperCase() || "CF"}
             </AvatarFallback>
           </Avatar>
           <button className="absolute bottom-0 right-0 p-2 bg-primary text-primary-foreground rounded-full shadow-lg hover:scale-110 transition-transform">

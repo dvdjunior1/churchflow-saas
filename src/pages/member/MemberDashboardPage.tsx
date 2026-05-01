@@ -6,7 +6,6 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
 export default function MemberDashboardPage() {
   const user = useAuthStore(s => s.user);
@@ -27,18 +26,19 @@ export default function MemberDashboardPage() {
     !myMinistryLinks.some(link => link.ministryId === min.id)
   );
   const totalDonated = myContributions.reduce((acc, curr) => acc + curr.amount, 0);
-  const handleJoinMinistry = async (minId: string) => {
+  const handleJoinMinistry = (minId: string) => {
     if (!memberId) {
       toast.error("Vínculo de membro não encontrado.");
       return;
     }
     try {
-      const res = await api<any>('/api/ministry-members', {
-        method: 'POST',
-        body: JSON.stringify({ memberId, ministryId: minId, role: 'member' })
+      // Local-first action: directly update local store
+      linkMember({ 
+        memberId, 
+        ministryId: minId, 
+        role: 'member' 
       });
-      linkMember(res);
-      toast.success("Solicitação enviada!");
+      toast.success("Solicitação enviada com sucesso!");
     } catch (e) {
       toast.error("Erro ao solicitar participação.");
     }

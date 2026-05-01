@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Wallet, Search, Filter, Download, Calendar, TrendingUp } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Wallet, Search, TrendingUp, Calendar, Download } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
-import { api } from '@/lib/api-client';
-import type { FinancialRecord } from '@shared/types';
+import { useDataStore } from '@/lib/data-store';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -13,24 +11,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 export default function MemberDonationsPage() {
   const user = useAuthStore(s => s.user);
+  const memberId = user?.memberId;
+  const records = useDataStore(s => s.financialRecords);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
-  const { data: records = [], isLoading } = useQuery<FinancialRecord[]>({
-    queryKey: ['member-donations', user?.memberId],
-    queryFn: async () => {
-      if (!user?.memberId) return [];
-      const res = await api<FinancialRecord[]>(`/api/member-donations/${user.memberId}`);
-      return res;
-    },
-    enabled: !!user?.memberId,
-  });
-  const filtered = records.filter(r => {
-    const matchesSearch = r.category.toLowerCase().includes(search.toLowerCase());
-    const matchesType = typeFilter === 'all' || r.type === typeFilter;
-    return matchesSearch && matchesType;
-  });
-  const total = filtered.reduce((acc, curr) => acc + curr.amount, 0);
-  const lastDonation = records.length > 0 ? records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] : null;
+  const myRecords = useMemo(() => {
+    if (!memberId) return [];
+    return records.filter(r => r.memberId === memberId);
+  }, [records, memberId]);
+  const filtered = useMemo(() => {
+    return myRecords.filter(r => {
+      const matchesSearch = r.category.toLowerCase().includes(search.toLowerCase());
+      const matchesType = typeFilter === 'all' || r.type === typeFilter;
+      return matchesSearch && matchesType;
+    });
+  }, [myRecords, search, typeFilter]);
+  const total = useMemo(() => 
+    filtered.reduce((acc, curr) => acc + curr.amount, 0), 
+  [filtered]);
+  const lastDonation = useMemo(() => {
+    if (myRecords.length === 0) return null;
+    return [...myRecords].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+  }, [myRecords]);
   const formatCurrency = (val: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   return (
@@ -69,9 +71,9 @@ export default function MemberDonationsPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground uppercase">Frequência</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{records.length} Entradas</div>
+            <div className="text-2xl font-bold text-foreground">{myRecords.length} Entradas</div>
             <div className="flex items-center mt-2 text-xs text-muted-foreground">
-              Histórico completo registrado
+              Histórico completo registrado localmente
             </div>
           </CardContent>
         </Card>
@@ -79,9 +81,9 @@ export default function MemberDonationsPage() {
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Filtrar por destinação..." 
-            className="pl-10" 
+          <Input
+            placeholder="Filtrar por destinação..."
+            className="pl-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -110,9 +112,7 @@ export default function MemberDonationsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-12">Carregando...</TableCell></TableRow>
-            ) : filtered.length === 0 ? (
+            {filtered.length === 0 ? (
               <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground italic">Nenhuma contribuição encontrada.</TableCell></TableRow>
             ) : (
               filtered.map((r) => (

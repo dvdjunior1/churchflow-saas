@@ -1,7 +1,7 @@
 import '@/lib/errorReporter';
 import { enableMapSet } from "immer";
 enableMapSet();
-import React, { StrictMode } from 'react'
+import React, { StrictMode, useEffect } from 'react'
 import { createRoot, Root } from 'react-dom/client'
 import {
   createBrowserRouter,
@@ -20,10 +20,10 @@ import ProfilePage from '@/pages/shared/ProfilePage'
 import { FinancialPage } from '@/pages/admin/FinancialPage'
 import { EventsPage } from '@/pages/admin/EventsPage'
 import ReportsPage from '@/pages/admin/ReportsPage'
-import MemberDashboardPage from '@/pages/member/MemberDashboardPage'import MemberDonationsPage from '@/pages/member/MemberDonationsPage'
+import MemberDashboardPage from '@/pages/member/MemberDashboardPage'
+import MemberDonationsPage from '@/pages/member/MemberDonationsPage'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 import { useDataStore } from '@/lib/data-store'
-import { useEffect } from 'react'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -77,14 +77,11 @@ const container = document.getElementById('root')!;
 if (!window.__reactRoot) {
   window.__reactRoot = createRoot(container);
 }
-
 function App() {
-  const seedIfEmpty = useDataStore.getState().seedIfEmpty;
-
+  const seedIfEmpty = useDataStore(s => s.seedIfEmpty);
   useEffect(() => {
     seedIfEmpty();
-  }, []);
-
+  }, [seedIfEmpty]);
   return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>
@@ -93,7 +90,6 @@ function App() {
     </QueryClientProvider>
   );
 }
-
 window.__reactRoot.render(
   <StrictMode>
     <App />
