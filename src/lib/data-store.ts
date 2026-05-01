@@ -80,7 +80,7 @@ export const useDataStore = create<DataState>()(
       })),
     }),
     {
-      name: 'churchflow-data-v3',
+      name: 'churchflow-data-v4',
     }
   )
 );

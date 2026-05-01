@@ -10,7 +10,8 @@ import {
   ChevronUp,
   UserCircle,
   Banknote,
-  Calendar
+  Calendar,
+  FileBarChart
 } from "lucide-react";
 import {
   Sidebar,
@@ -47,15 +48,16 @@ export function AppSidebar(): JSX.Element {
     { title: "Ministérios", icon: Heart, url: "/admin/ministries" },
     { title: "Agenda", icon: Calendar, url: "/admin/events" },
     { title: "Financeiro", icon: Banknote, url: "/admin/finance" },
+    { title: "Relatórios", icon: FileBarChart, url: "/admin/reports" },
   ];
   return (
-    <Sidebar collapsible="icon" className="border-r">
+    <Sidebar collapsible="icon" className="border-r border-slate-200">
       <SidebarHeader className="h-16 flex items-center px-4">
         <Link to="/admin" className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
             <Sparkles className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-bold text-lg tracking-tight group-data-[collapsible=icon]:hidden">ChurchFlow</span>
+          <span className="font-bold text-lg tracking-tight group-data-[collapsible=icon]:hidden text-foreground">ChurchFlow</span>
         </Link>
       </SidebarHeader>
       <SidebarContent>
@@ -89,25 +91,25 @@ export function AppSidebar(): JSX.Element {
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-4 border-t">
+      <SidebarFooter className="p-4 border-t border-slate-200">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton className="h-12 w-full justify-start gap-3 p-2">
+            <SidebarMenuButton className="h-12 w-full justify-start gap-3 p-2 hover:bg-accent hover:text-accent-foreground">
               <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
-                <UserCircle className="h-5 w-5" />
+                <UserCircle className="h-5 w-5 text-foreground" />
               </div>
               <div className="flex flex-col text-left group-data-[collapsible=icon]:hidden overflow-hidden">
-                <span className="text-sm font-medium truncate">{user?.name}</span>
+                <span className="text-sm font-medium truncate text-foreground">{user?.name}</span>
                 <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
               </div>
-              <ChevronUp className="ml-auto h-4 w-4 group-data-[collapsible=icon]:hidden" />
+              <ChevronUp className="ml-auto h-4 w-4 group-data-[collapsible=icon]:hidden text-muted-foreground" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 mb-2">
             <DropdownMenuItem asChild>
               <Link to="/admin/profile">Meu Perfil</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive focus:bg-destructive/10">
               <LogOut className="mr-2 h-4 w-4" />
               Sair
             </DropdownMenuItem>

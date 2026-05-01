@@ -18,6 +18,7 @@ import { MembersPage } from '@/pages/admin/MembersPage'
 import { MinistriesPage } from '@/pages/admin/MinistriesPage'
 import { FinancialPage } from '@/pages/admin/FinancialPage'
 import { EventsPage } from '@/pages/admin/EventsPage'
+import ReportsPage from '@/pages/admin/ReportsPage'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,6 +49,7 @@ const router = createBrowserRouter([
       { path: "ministries", element: <MinistriesPage /> },
       { path: "finance", element: <FinancialPage /> },
       { path: "events", element: <EventsPage /> },
+      { path: "reports", element: <ReportsPage /> },
     ]
   }
 ]);

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Banknote, Plus, TrendingUp, TrendingDown, Search, Filter, Loader2 } from 'lucide-react';
+import { Banknote, Plus, TrendingUp, TrendingDown, Search, Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -19,7 +19,7 @@ import { toast } from 'sonner';
 const financeSchema = z.object({
   amount: z.coerce.number().positive("Valor deve ser positivo"),
   type: z.enum(['tithe', 'offering', 'donation']),
-  memberId: z.string().optional().or(z.literal("anonymous")),
+  memberId: z.string().min(1, "Selecione um contribuinte"),
   category: z.string().min(2, "Categoria obrigatória"),
   description: z.string().optional(),
   date: z.string().min(10, "Data obrigatória"),
@@ -88,11 +88,12 @@ export function FinancialPage() {
     r.category.toLowerCase().includes(search.toLowerCase()) ||
     getMemberName(r.memberId).toLowerCase().includes(search.toLowerCase())
   );
+  const totalFiltered = filteredRecords.reduce((acc, curr) => acc + curr.amount, 0);
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Financeiro</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Financeiro</h1>
           <p className="text-muted-foreground">Controle central de contribuições e fluxo de caixa.</p>
         </div>
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
@@ -182,12 +183,12 @@ export function FinancialPage() {
           </CardContent>
         </Card>
         {stats?.distribution.map((d, i) => (
-          <Card key={i} className="hover:shadow-soft transition-shadow">
+          <Card key={i} className="hover:shadow-soft transition-shadow border-slate-200">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground uppercase">{d.name}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(d.value)}</div>
+              <div className="text-2xl font-bold text-foreground">{formatCurrency(d.value)}</div>
               <div className="w-full bg-secondary h-2 rounded-full mt-3 overflow-hidden">
                 <div
                   className="bg-primary h-full transition-all duration-700"
@@ -198,11 +199,14 @@ export function FinancialPage() {
           </Card>
         ))}
       </div>
-      <Card className="rounded-xl overflow-hidden border shadow-soft">
+      <Card className="rounded-xl overflow-hidden border border-slate-200 shadow-soft">
         <CardHeader className="bg-muted/30 border-b">
           <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
             <div>
-              <CardTitle>Histórico de Entradas</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle>Histórico de Entradas</CardTitle>
+                <Badge variant="outline" className="bg-background">{formatCurrency(totalFiltered)} total visível</Badge>
+              </div>
               <CardDescription>Fluxo recente de dízimos e ofertas.</CardDescription>
             </div>
             <div className="relative">
