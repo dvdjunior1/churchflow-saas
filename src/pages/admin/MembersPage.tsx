@@ -188,7 +188,10 @@ export function MembersPage() {
       const finalPhoto = values.photoUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(values.fullName)}`;
       const payload = { ...values, photoUrl: finalPhoto };
       if (editingMember) {
-        updateMemberAction(editingMember.id, payload);
+        updateMemberAction(editingMember.id, {
+          ...payload,
+          positions: payload.positions ?? [],
+        });
         toast.success('Membro atualizado com sucesso');
       } else {
         addMember(payload);
@@ -512,10 +515,13 @@ export function MembersPage() {
                         <div className="pt-2">
                           <Button 
                             type="button" 
-                            variant="outline" 
-                            size="sm" 
+                            variant="outline"
+                            size="sm"
                             className="w-full text-xs gap-2"
-                            onClick={() => navigate('/admin/ministries')}
+                            onClick={() => {
+                              setIsDialogOpen(false);
+                              navigate('/admin/ministries');
+                            }}
                           >
                             <ExternalLink className="h-3 w-3" />
                             Ir para Gestão de Ministérios

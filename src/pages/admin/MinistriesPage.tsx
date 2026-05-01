@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useDataStore } from '@/lib/data-store';
-import type { Ministry, MinistryMember, Member, Position } from '@shared/types';
+import type { Ministry } from '@shared/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent, CardFooter, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +25,7 @@ const ministrySchema = z.object({
 });
 export function MinistriesPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [managingMinistry, setManagingMinistry] = useState<Ministry | null>(null);
+  const [managingMinistryId, setManagingMinistryId] = useState<string | null>(null);
   const [assignMemberId, setAssignMemberId] = useState<string>("");
   const [assignPositionId, setAssignPositionId] = useState<string>("none");
   const ministries = useDataStore(s => s.ministries);
@@ -38,6 +38,9 @@ export function MinistriesPage() {
   const unlinkMemberAction = useDataStore(s => s.unlinkMember);
   const updateMinistryMemberAction = useDataStore(s => s.updateMinistryMember);
   const allPositions = useDataStore(s => s.positions);
+  const currentMinistry = useMemo(() => 
+    ministries.find(m => m.id === managingMinistryId) || null,
+  [ministries, managingMinistryId]);
   const activeMinistryPositions = useMemo(() =>
     allPositions.filter(p => p.active && p.scope === 'ministry'),
   [allPositions]);
@@ -63,9 +66,9 @@ export function MinistriesPage() {
     }
   };
   const currentTeam = useMemo(() => {
-    if (!managingMinistry) return [];
+    if (!managingMinistryId) return [];
     return ministryMembers
-      .filter(mm => mm.ministryId === managingMinistry.id)
+      .filter(mm => mm.ministryId === managingMinistryId)
       .map(mm => ({
         ...mm,
         member: members.find(m => m.id === mm.memberId),
@@ -77,25 +80,25 @@ export function MinistriesPage() {
         if (a.role !== 'leader' && b.role === 'leader') return 1;
         return (a.member?.fullName || '').localeCompare(b.member?.fullName || '');
       });
-  }, [managingMinistry, ministryMembers, members, allPositions]);
+  }, [managingMinistryId, ministryMembers, members, allPositions]);
   const membersNotJoined = useMemo(() => {
-    if (!managingMinistry) return [];
+    if (!managingMinistryId) return [];
     const joinedIds = new Set(currentTeam.map(t => t.memberId));
     return members.filter(m => !joinedIds.has(m.id));
-  }, [members, currentTeam, managingMinistry]);
+  }, [members, currentTeam, managingMinistryId]);
   const handleAssignMember = () => {
-    if (!managingMinistry || !assignMemberId) return;
+    if (!managingMinistryId || !assignMemberId) return;
     try {
       const isFirstMember = currentTeam.length === 0;
       const role = isFirstMember ? 'leader' : 'member';
       linkMemberAction({
         memberId: assignMemberId,
-        ministryId: managingMinistry.id,
+        ministryId: managingMinistryId,
         role: role,
         positionId: assignPositionId === 'none' ? undefined : assignPositionId
       });
       if (isFirstMember) {
-        updateMinistryAction(managingMinistry.id, { leaderId: assignMemberId });
+        updateMinistryAction(managingMinistryId, { leaderId: assignMemberId });
         toast.success(`Membro vinculado como líder do ministério`);
       } else {
         toast.success("Membro vinculado com sucesso");
@@ -107,17 +110,17 @@ export function MinistriesPage() {
     }
   };
   const toggleLeader = (mmId: string, memberId: string, isCurrentlyLeader: boolean) => {
-    if (!managingMinistry) return;
+    if (!managingMinistryId) return;
     if (!isCurrentlyLeader) {
       const oldLeaderMM = currentTeam.find(t => t.role === 'leader');
       if (oldLeaderMM) {
         updateMinistryMemberAction(oldLeaderMM.id, { role: 'member' });
       }
-      updateMinistryAction(managingMinistry.id, { leaderId: memberId });
+      updateMinistryAction(managingMinistryId, { leaderId: memberId });
       updateMinistryMemberAction(mmId, { role: 'leader' });
       toast.success("Novo líder definido");
     } else {
-      updateMinistryAction(managingMinistry.id, { leaderId: undefined });
+      updateMinistryAction(managingMinistryId, { leaderId: undefined });
       updateMinistryMemberAction(mmId, { role: 'member' });
       toast.success("Liderança removida");
     }
@@ -220,7 +223,7 @@ export function MinistriesPage() {
                 )}
               </CardContent>
               <CardFooter className="pt-3 border-t">
-                <Button variant="ghost" className="w-full text-xs" onClick={() => setManagingMinistry(min)}>
+                <Button variant="ghost" className="w-full text-xs" onClick={() => setManagingMinistryId(min.id)}>
                   Gerenciar Equipe
                 </Button>
               </CardFooter>
@@ -228,10 +231,10 @@ export function MinistriesPage() {
           );
         })}
       </div>
-      <Sheet open={!!managingMinistry} onOpenChange={() => setManagingMinistry(null)}>
+      <Sheet open={managingMinistryId !== null} onOpenChange={(open) => !open && setManagingMinistryId(null)}>
         <SheetContent className="sm:max-w-md flex flex-col p-0">
           <SheetHeader className="p-6 pb-2">
-            <SheetTitle>Equipe: {managingMinistry?.name}</SheetTitle>
+            <SheetTitle>Equipe: {currentMinistry?.name}</SheetTitle>
             <SheetDescription>Organize o corpo de voluntários deste ministério.</SheetDescription>
           </SheetHeader>
           <ScrollArea className="flex-1 px-6">
@@ -327,8 +330,8 @@ export function MinistriesPage() {
                           onClick={() => {
                             if (confirm('Remover este membro do ministério?')) {
                               unlinkMemberAction(item.id);
-                              if (item.role === 'leader' && managingMinistry) {
-                                updateMinistryAction(managingMinistry.id, { leaderId: undefined });
+                              if (item.role === 'leader' && managingMinistryId) {
+                                updateMinistryAction(managingMinistryId, { leaderId: undefined });
                               }
                               toast.info('Membro removido');
                             }

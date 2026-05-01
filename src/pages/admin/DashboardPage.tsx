@@ -24,9 +24,13 @@ export function DashboardPage() {
     .filter(e => new Date(e.date) >= new Date())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 3);
+
+  const currentMonthName = new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(new Date());
+  const capitalizedMonth = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1).replace('.', '');
+
   const growthData = [
     { month: 'Jan', count: 120 }, { month: 'Fev', count: 135 }, { month: 'Mar', count: 150 },
-    { month: 'Abr', count: 162 }, { month: 'Mai', count: 180 }, { month: 'Jun', count: totalMembers }
+    { month: 'Abr', count: 162 }, { month: 'Mai', count: 180 }, { month: capitalizedMonth, count: totalMembers }
   ];
   const metrics = [
     {
@@ -89,7 +93,7 @@ export function DashboardPage() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 12}} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 12}} />
-                <Tooltip cursor={{fill: 'hsl(var(--muted))', opacity: 0.4}} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
+                <Tooltip cursor={{fill: 'hsl(var(--primary))', opacity: 0.05}} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
                 <Bar dataKey="count" fill="#3B82F6" radius={[6, 6, 0, 0]} barSize={40} />
               </BarChart>
             </ResponsiveContainer>
