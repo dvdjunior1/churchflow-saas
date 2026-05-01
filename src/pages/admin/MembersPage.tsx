@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, MoreHorizontal, Filter, Loader2, UserCircle } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Filter, UserCircle, Save } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { api } from '@/lib/api-client';
 import { useDataStore } from '@/lib/data-store';
 import type { Member } from '@shared/types';
 import { Button } from '@/components/ui/button';
@@ -54,20 +52,10 @@ export function MembersPage() {
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
-  const queryClient = useQueryClient();
   const members = useDataStore(s => s.members);
-  const setMembers = useDataStore(s => s.setMembers);
   const addMember = useDataStore(s => s.addMember);
   const updateMemberAction = useDataStore(s => s.updateMember);
   const deleteMemberAction = useDataStore(s => s.deleteMember);
-  const { isLoading } = useQuery<{ items: Member[] }>({
-    queryKey: ['members'],
-    queryFn: async () => {
-      const data = await api<{ items: Member[] }>('/api/members');
-      setMembers(data.items);
-      return data;
-    },
-  });
   const form = useForm<z.infer<typeof memberSchema>>({
     resolver: zodResolver(memberSchema),
     defaultValues: {
@@ -99,57 +87,39 @@ export function MembersPage() {
         birthDate: '',
         baptismDate: '',
         role: 'Membro',
-        photoUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`,
+        photoUrl: '',
       });
     }
   }, [editingMember, form]);
-  const saveMutation = useMutation({
-    mutationFn: (data: z.infer<typeof memberSchema>) => {
+  const onSubmit = (values: z.infer<typeof memberSchema>) => {
+    try {
       if (editingMember) {
-        return api<Member>(`/api/members/${editingMember.id}`, { 
-          method: 'PUT', 
-          body: JSON.stringify(data) 
-        });
-      }
-      return api<Member>('/api/members', { 
-        method: 'POST', 
-        body: JSON.stringify(data) 
-      });
-    },
-    onSuccess: (data) => {
-      if (editingMember) {
-        updateMemberAction(editingMember.id, data);
-        toast.success('Membro atualizado');
+        updateMemberAction(editingMember.id, values);
+        toast.success('Membro atualizado com sucesso');
       } else {
-        addMember(data);
-        toast.success('Membro cadastrado');
+        const fallbackPhoto = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(values.fullName)}`;
+        addMember({
+          ...values,
+          photoUrl: values.photoUrl || fallbackPhoto
+        });
+        toast.success('Membro cadastrado com sucesso');
       }
-      queryClient.invalidateQueries({ queryKey: ['members'] });
       setIsDialogOpen(false);
       setEditingMember(null);
+    } catch (e) {
+      toast.error('Ocorreu um erro ao salvar o membro');
     }
-  });
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => api(`/api/members/${id}`, { method: 'DELETE' }),
-    onSuccess: (_, id) => {
-      deleteMemberAction(id);
-      queryClient.invalidateQueries({ queryKey: ['members'] });
-      toast.success('Membro removido');
-    }
-  });
+  };
   const filteredMembers = members.filter(m =>
     m.fullName.toLowerCase().includes(search.toLowerCase()) ||
     m.email.toLowerCase().includes(search.toLowerCase())
   );
-  const onSubmit = (values: z.infer<typeof memberSchema>) => {
-    saveMutation.mutate(values);
-  };
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Membros</h1>
-          <p className="text-muted-foreground">Gerencie o cadastro e histórico de todos os fiéis.</p>
+          <p className="text-muted-foreground">Gerencie o cadastro e histórico de todos os fiéis localmente.</p>
         </div>
         <Button className="btn-gradient" onClick={() => { setEditingMember(null); setIsDialogOpen(true); }}>
           <Plus className="mr-2 h-4 w-4" />
@@ -182,17 +152,15 @@ export function MembersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && members.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-10">Carregando membros...</TableCell></TableRow>
-            ) : filteredMembers.length === 0 ? (
+            {filteredMembers.length === 0 ? (
               <TableRow><TableCell colSpan={5} className="text-center py-10">Nenhum membro encontrado.</TableCell></TableRow>
             ) : (
               filteredMembers.map((member) => (
-                <TableRow key={member.id} className="group">
+                <TableRow key={member.id} className="group hover:bg-slate-50 transition-colors">
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9 border">
-                        <AvatarImage src={member.photoUrl} />
+                        <AvatarImage src={member.photoUrl} alt={member.fullName} />
                         <AvatarFallback>{member.fullName.substring(0, 2).toUpperCase()}</AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col">
@@ -205,7 +173,7 @@ export function MembersPage() {
                     <Badge variant="secondary" className="font-normal">{member.role}</Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
-                    {member.baptismDate ? new Date(member.baptismDate).toLocaleDateString() : 'N/A'}
+                    {member.baptismDate ? new Date(member.baptismDate).toLocaleDateString() : 'Não informado'}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">{member.phone}</TableCell>
                   <TableCell className="text-right">
@@ -219,7 +187,12 @@ export function MembersPage() {
                         <DropdownMenuItem onClick={() => { setEditingMember(member); setIsDialogOpen(true); }}>Editar Dados</DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
-                          onClick={() => deleteMutation.mutate(member.id)}
+                          onClick={() => {
+                            if (confirm('Deseja realmente remover este membro?')) {
+                              deleteMemberAction(member.id);
+                              toast.success('Membro removido');
+                            }
+                          }}
                         >
                           Remover
                         </DropdownMenuItem>
@@ -236,7 +209,7 @@ export function MembersPage() {
         <DialogContent className="sm:max-w-lg overflow-y-auto max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>{editingMember ? 'Editar Membro' : 'Adicionar Membro'}</DialogTitle>
-            <DialogDescription>Preencha os dados pessoais e eclesiásticos do membro abaixo.</DialogDescription>
+            <DialogDescription>Dados persistidos localmente para rapidez e estabilidade.</DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
@@ -296,7 +269,7 @@ export function MembersPage() {
                   name="baptismDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Data de Batismo</FormLabel>
+                      <FormLabel>Data de Batismo (Opcional)</FormLabel>
                       <FormControl><Input type="date" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -318,15 +291,15 @@ export function MembersPage() {
                   name="photoUrl"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>URL da Foto</FormLabel>
+                      <FormLabel>URL da Foto (Opcional)</FormLabel>
                       <FormControl><Input placeholder="https://..." {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
-              <Button type="submit" className="w-full btn-gradient" disabled={saveMutation.isPending}>
-                {saveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" className="w-full btn-gradient">
+                <Save className="mr-2 h-4 w-4" />
                 {editingMember ? 'Salvar Alterações' : 'Cadastrar Membro'}
               </Button>
             </form>

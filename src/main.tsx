@@ -20,10 +20,10 @@ import ProfilePage from '@/pages/shared/ProfilePage'
 import { FinancialPage } from '@/pages/admin/FinancialPage'
 import { EventsPage } from '@/pages/admin/EventsPage'
 import ReportsPage from '@/pages/admin/ReportsPage'
-import MemberDashboardPage from '@/pages/member/MemberDashboardPage'
-import MemberDonationsPage from '@/pages/member/MemberDonationsPage'
-
+import MemberDashboardPage from '@/pages/member/MemberDashboardPage'import MemberDonationsPage from '@/pages/member/MemberDonationsPage'
 import { AuthGuard } from '@/components/auth/AuthGuard'
+import { useDataStore } from '@/lib/data-store'
+import { useEffect } from 'react'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -77,12 +77,25 @@ const container = document.getElementById('root')!;
 if (!window.__reactRoot) {
   window.__reactRoot = createRoot(container);
 }
-window.__reactRoot.render(
-  <StrictMode>
+
+function App() {
+  const seedIfEmpty = useDataStore.getState().seedIfEmpty;
+
+  useEffect(() => {
+    seedIfEmpty();
+  }, []);
+
+  return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>
         <RouterProvider router={router} />
       </ErrorBoundary>
     </QueryClientProvider>
+  );
+}
+
+window.__reactRoot.render(
+  <StrictMode>
+    <App />
   </StrictMode>,
 );
