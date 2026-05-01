@@ -2,7 +2,7 @@ import '@/lib/errorReporter';
 import { enableMapSet } from "immer";
 enableMapSet();
 import React, { StrictMode, useEffect } from 'react'
-import { createRoot } from 'react-dom/client'
+import { createRoot, type Root } from 'react-dom/client'
 import {
   createBrowserRouter,
   RouterProvider
@@ -68,7 +68,11 @@ const router = createBrowserRouter([
     ]
   }
 ]);
-function App() {
+/**
+ * Internal App component to handle store initialization.
+ * Separate from entry point to allow for cleaner Fast Refresh.
+ */
+function AppRoot() {
   const seedIfEmpty = useDataStore(s => s.seedIfEmpty);
   useEffect(() => {
     seedIfEmpty();
@@ -81,12 +85,20 @@ function App() {
     </QueryClientProvider>
   );
 }
+// Singleton pattern for React Root to prevent double-initialization warnings
+declare global {
+  interface Window {
+    __reactRoot?: Root;
+  }
+}
 const container = document.getElementById('root');
 if (container) {
-  const root = createRoot(container);
-  root.render(
+  if (!window.__reactRoot) {
+    window.__reactRoot = createRoot(container);
+  }
+  window.__reactRoot.render(
     <StrictMode>
-      <App />
+      <AppRoot />
     </StrictMode>
   );
 }

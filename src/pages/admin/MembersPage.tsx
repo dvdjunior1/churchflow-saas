@@ -56,7 +56,7 @@ const memberSchema = z.object({
   birthDate: z.string().min(1, "Data de nascimento obrigatória"),
   baptismDate: z.string().optional(),
   role: z.string().min(2, "Cargo obrigatório"),
-  photoUrl: z.string().min(1, "Foto obrigatória"),
+  photoUrl: z.string().optional(), // Now optional
   whatsapp: z.string().optional(),
   alternatePhone: z.string().optional(),
   gender: z.enum(['M', 'F', 'O']),
@@ -170,15 +170,14 @@ export function MembersPage() {
   }, [form]);
   const onSubmit: SubmitHandler<FormValues> = (values) => {
     try {
+      // Dynamic DiceBear seed fallback if photoUrl is missing
+      const finalPhoto = values.photoUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(values.fullName)}`;
+      const payload = { ...values, photoUrl: finalPhoto };
       if (editingMember) {
-        updateMemberAction(editingMember.id, values);
+        updateMemberAction(editingMember.id, payload);
         toast.success('Membro atualizado com sucesso');
       } else {
-        const fallbackPhoto = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(values.fullName)}`;
-        addMember({
-          ...values,
-          photoUrl: values.photoUrl || fallbackPhoto
-        });
+        addMember(payload);
         toast.success('Membro cadastrado com sucesso');
       }
       setIsDialogOpen(false);
@@ -313,7 +312,7 @@ export function MembersPage() {
                     <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
                   </label>
                 </div>
-                <p className="text-xs text-muted-foreground">Clique no ícone para alterar a foto</p>
+                <p className="text-xs text-muted-foreground">Clique no ícone para alterar a foto (opcional)</p>
               </div>
               <div className="space-y-6">
                 <div>
