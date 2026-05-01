@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, Search, MoreHorizontal, Filter, UserCircle, Save, Camera, Cake, Briefcase, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, MoreHorizontal, Filter, UserCircle, Save, Camera, Cake, Briefcase, X, Heart, ExternalLink } from 'lucide-react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -78,6 +79,7 @@ const memberSchema = z.object({
 });
 type FormValues = z.infer<typeof memberSchema>;
 export function MembersPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
@@ -86,6 +88,8 @@ export function MembersPage() {
   const updateMemberAction = useDataStore(s => s.updateMember);
   const deleteMemberAction = useDataStore(s => s.deleteMember);
   const allPositions = useDataStore(s => s.positions);
+  const ministries = useDataStore(s => s.ministries);
+  const ministryMembers = useDataStore(s => s.ministryMembers);
   const activeChurchPositions = useMemo(() =>
     allPositions.filter(p => p.active && p.scope === 'church'),
   [allPositions]);
@@ -210,6 +214,20 @@ export function MembersPage() {
       default: return <Badge variant="outline">{status}</Badge>;
     }
   };
+  const getMemberMinistries = (memberId: string) => {
+    return ministryMembers
+      .filter(mm => mm.memberId === memberId)
+      .map(mm => {
+        const ministry = ministries.find(m => m.id === mm.ministryId);
+        const position = allPositions.find(p => p.id === mm.positionId);
+        return {
+          id: mm.id,
+          ministryName: ministry?.name || 'Desconhecido',
+          role: mm.role,
+          positionName: position?.name || (mm.role === 'leader' ? 'Líder' : 'Membro')
+        };
+      });
+  };
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -232,7 +250,7 @@ export function MembersPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
           {search && (
-            <button 
+            <button
               onClick={() => setSearch('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
@@ -248,8 +266,9 @@ export function MembersPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[300px]">Membro</TableHead>
+              <TableHead className="w-[280px]">Membro</TableHead>
               <TableHead>Cargos (Geral)</TableHead>
+              <TableHead>Ministérios</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Contato</TableHead>
               <TableHead className="text-right">Ações</TableHead>
@@ -258,7 +277,7 @@ export function MembersPage() {
           <TableBody>
             {filteredMembers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-20">
+                <TableCell colSpan={6} className="text-center py-20">
                   <div className="flex flex-col items-center gap-3">
                     <p className="text-muted-foreground">Nenhum membro encontrado com estes critérios.</p>
                     {search && (
@@ -270,59 +289,81 @@ export function MembersPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredMembers.map((member) => (
-                <TableRow key={member.id} className="group hover:bg-slate-50 transition-colors">
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9 border">
-                        <AvatarImage src={member.photoUrl} alt={member.fullName} />
-                        <AvatarFallback>{member.fullName.substring(0, 2).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col overflow-hidden">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-foreground truncate max-w-[150px]">{member.fullName}</span>
-                          {member.showBirthdayPublic && <Cake className="h-3 w-3 text-rose-500" />}
+              filteredMembers.map((member) => {
+                const myMinistries = getMemberMinistries(member.id);
+                return (
+                  <TableRow key={member.id} className="group hover:bg-slate-50 transition-colors">
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9 border">
+                          <AvatarImage src={member.photoUrl} alt={member.fullName} />
+                          <AvatarFallback>{member.fullName.substring(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col overflow-hidden">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-foreground truncate max-w-[150px]">{member.fullName}</span>
+                            {member.showBirthdayPublic && <Cake className="h-3 w-3 text-rose-500" />}
+                          </div>
+                          <span className="text-xs text-muted-foreground truncate max-w-[150px]">{member.email}</span>
                         </div>
-                        <span className="text-xs text-muted-foreground truncate max-w-[150px]">{member.email}</span>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1 max-w-[200px]">
-                      {member.positions?.map(pid => {
-                        const pname = allPositions.find(p => p.id === pid)?.name;
-                        return pname ? <Badge key={`${member.id}-${pid}`} variant="outline" className="text-[10px] py-0">{pname}</Badge> : null;
-                      })}
-                      {!member.positions?.length && <span className="text-xs text-slate-300 italic">Nenhum</span>}
-                    </div>
-                  </TableCell>
-                  <TableCell>{getStatusBadge(member.memberStatus)}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{member.phone}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setEditingMember(member); setIsDialogOpen(true); }}>Editar Dados</DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => {
-                            if (confirm('Remover este registro?')) {
-                              deleteMemberAction(member.id);
-                              toast.success('Membro removido');
-                            }
-                          }}
-                        >
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1 max-w-[180px]">
+                        {member.positions?.map(pid => {
+                          const pname = allPositions.find(p => p.id === pid)?.name;
+                          return pname ? <Badge key={`${member.id}-${pid}`} variant="outline" className="text-[10px] py-0">{pname}</Badge> : null;
+                        })}
+                        {!member.positions?.length && <span className="text-xs text-slate-300 italic">Nenhum</span>}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1 max-w-[200px]">
+                        {myMinistries.slice(0, 2).map((min) => (
+                          <Badge 
+                            key={min.id} 
+                            className={`text-[9px] py-0 ${min.role === 'leader' ? 'bg-primary/10 text-primary hover:bg-primary/20 border-primary/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border-slate-200'}`} 
+                            variant="outline"
+                          >
+                            {min.ministryName}
+                          </Badge>
+                        ))}
+                        {myMinistries.length > 2 && (
+                          <Badge variant="outline" className="text-[9px] py-0 bg-slate-50 text-muted-foreground">
+                            +{myMinistries.length - 2}
+                          </Badge>
+                        )}
+                        {myMinistries.length === 0 && <span className="text-xs text-slate-300 italic">-</span>}
+                      </div>
+                    </TableCell>
+                    <TableCell>{getStatusBadge(member.memberStatus)}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm whitespace-nowrap">{member.phone}</TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => { setEditingMember(member); setIsDialogOpen(true); }}>Editar Dados</DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => {
+                              if (confirm('Remover este registro?')) {
+                                deleteMemberAction(member.id);
+                                toast.success('Membro removido');
+                              }
+                            }}
+                          >
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -437,6 +478,55 @@ export function MembersPage() {
                         </ScrollArea>
                       </FormItem>
                     )} />
+                  </div>
+                </div>
+                <Separator />
+                {/* MINISTRY PARTICIPATION SECTION */}
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Heart className="h-4 w-4 text-primary" />
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-primary">Participação em Ministérios</h3>
+                  </div>
+                  <div className="bg-slate-50 border rounded-xl p-6 space-y-4">
+                    {editingMember ? (
+                      <>
+                        {getMemberMinistries(editingMember.id).length === 0 ? (
+                          <div className="text-center py-4">
+                            <p className="text-sm text-muted-foreground italic">Nenhum ministério vinculado a este membro.</p>
+                          </div>
+                        ) : (
+                          <div className="grid gap-3">
+                            {getMemberMinistries(editingMember.id).map((min) => (
+                              <div key={min.id} className="flex items-center justify-between bg-white p-3 rounded-lg border shadow-sm">
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-bold">{min.ministryName}</span>
+                                  <span className="text-xs text-muted-foreground">{min.positionName}</span>
+                                </div>
+                                <Badge variant={min.role === 'leader' ? 'default' : 'secondary'} className="text-[10px] uppercase">
+                                  {min.role === 'leader' ? 'Líder' : 'Voluntário'}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div className="pt-2">
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full text-xs gap-2"
+                            onClick={() => navigate('/admin/ministries')}
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            Ir para Gestão de Ministérios
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic text-center py-2">
+                        Vinculação de ministérios disponível após o cadastro inicial.
+                      </p>
+                    )}
                   </div>
                 </div>
                 <Separator />
