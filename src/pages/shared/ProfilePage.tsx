@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,20 +20,19 @@ const profileSchema = z.object({
   email: z.string().email("E-mail inválido"),
   phone: z.string().min(10, "Telefone inválido"),
   birthDate: z.string().min(10, "Data inválida"),
-  photoUrl: z.string().min(1, "Foto obrigatória"),
+  photoUrl: z.string().url("URL inválida").or(z.literal("")),
 });
-type FormValues = z.infer<typeof profileSchema>;
 export default function ProfilePage() {
   const user = useAuthStore(s => s.user);
   const members = useDataStore(s => s.members);
   const updateMember = useDataStore(s => s.updateMember);
   const [isSaving, setIsSaving] = useState(false);
   const memberProfile = members.find(m => m.id === user?.memberId);
-  const form = useForm<FormValues>({
+  const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      fullName: memberProfile?.fullName || user?.name || '',
-      email: memberProfile?.email || user?.email || '',
+      fullName: user?.name || '',
+      email: user?.email || '',
       phone: memberProfile?.phone || '',
       birthDate: memberProfile?.birthDate || '',
       photoUrl: memberProfile?.photoUrl || '',
@@ -50,22 +49,21 @@ export default function ProfilePage() {
       });
     }
   }, [memberProfile, form]);
-  const onSubmit: SubmitHandler<FormValues> = async (values) => {
+  const onSubmit = async (values: z.infer<typeof profileSchema>) => {
     if (!user?.memberId) {
       toast.error("Perfil de membro não vinculado.");
       return;
     }
     setIsSaving(true);
-    updateMember(user.memberId, values);
     try {
-      await api(`/api/members/self/${user.memberId}`, {
+      const updated = await api(`/api/members/self/${user.memberId}`, {
         method: 'PUT',
         body: JSON.stringify(values),
       });
-      toast.success("Perfil atualizado e sincronizado!");
+      updateMember(user.memberId, updated as any);
+      toast.success("Perfil atualizado com sucesso!");
     } catch (error) {
-      console.error("Sync failed, but local state updated", error);
-      toast.info("Alterações salvas localmente (Sincronização pendente).");
+      toast.error("Falha ao atualizar perfil.");
     } finally {
       setIsSaving(false);
     }
@@ -77,7 +75,7 @@ export default function ProfilePage() {
           <Avatar className="h-32 w-32 border-4 border-background shadow-xl">
             <AvatarImage src={form.watch('photoUrl')} />
             <AvatarFallback className="text-3xl bg-primary text-primary-foreground">
-              {user?.name?.substring(0, 2).toUpperCase() || "CF"}
+              {user?.name.substring(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <button className="absolute bottom-0 right-0 p-2 bg-primary text-primary-foreground rounded-full shadow-lg hover:scale-110 transition-transform">

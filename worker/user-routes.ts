@@ -21,6 +21,17 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     await entity.patch(data);
     return ok(c, await entity.getState());
   });
+  app.put('/api/members/self/:id', async (c) => {
+    const id = c.req.param('id');
+    const data = await c.req.json();
+    // In a real app, verify that the logged-in user owns this memberId
+    const entity = new MemberEntity(c.env, id);
+    if (!(await entity.exists())) return bad(c, 'membro não encontrado');
+    
+    await entity.patch(data);
+    const updated = await entity.getState();
+    return ok(c, updated);
+  });
   app.delete('/api/members/:id', async (c) => {
     const deleted = await MemberEntity.delete(c.env, c.req.param('id'));
     return ok(c, { deleted });
@@ -65,6 +76,12 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const data = await c.req.json();
     const record = { ...data, id: data.id || crypto.randomUUID() };
     return ok(c, await FinancialRecordEntity.create(c.env, record));
+  });
+  app.get('/api/member-donations/:memberId', async (c) => {
+    const memberId = c.req.param('memberId');
+    const records = await FinancialRecordEntity.list(c.env, null, 1000);
+    const filtered = records.items.filter(r => r.memberId === memberId);
+    return ok(c, filtered);
   });
   app.get('/api/finances/stats', async (c) => {
     const records = await FinancialRecordEntity.list(c.env, null, 5000);

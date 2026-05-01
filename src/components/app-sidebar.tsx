@@ -100,15 +100,18 @@ export function AppSidebar(): JSX.Element {
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
+        <div className="px-6 py-2 text-[10px] text-muted-foreground/40 font-mono tracking-tighter">
+          v1.0.0-final
+        </div>
       </SidebarContent>
       <SidebarFooter className="p-4 border-t border-slate-200">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton className="h-12 w-full justify-start gap-3 p-2 hover:bg-accent hover:text-accent-foreground">
-              <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
-                <UserCircle className="h-5 w-5 text-foreground" />
-              </div>
-              <div className="flex flex-col text-left group-data-[collapsible=icon]:hidden overflow-hidden">
+              <Avatar className="h-8 w-8 shrink-0">
+                <AvatarFallback>{user?.name.substring(0,2).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col text-left group-data-[collapsible=icon]:hidden overflow-hidden flex-1">
                 <span className="text-sm font-medium truncate text-foreground">{user?.name}</span>
                 <span className="text-xs text-muted-foreground truncate capitalize">{user?.role}</span>
               </div>
@@ -117,7 +120,7 @@ export function AppSidebar(): JSX.Element {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 mb-2">
             <DropdownMenuItem asChild>
-              <Link to="/admin/profile">Meu Perfil</Link>
+              <Link to={isAdmin ? "/admin/profile" : "/member/profile"}>Meu Perfil</Link>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive focus:bg-destructive/10">
               <LogOut className="mr-2 h-4 w-4" />

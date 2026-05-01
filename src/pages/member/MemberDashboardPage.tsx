@@ -6,6 +6,8 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { api } from '@/lib/api-client';
+import { toast } from 'sonner';
 export default function MemberDashboardPage() {
   const user = useAuthStore(s => s.user);
   const memberId = user?.memberId;
@@ -14,13 +16,34 @@ export default function MemberDashboardPage() {
   const records = useDataStore(s => s.financialRecords);
   const ministryMembers = useDataStore(s => s.ministryMembers);
   const ministries = useDataStore(s => s.ministries);
+  const linkMember = useDataStore(s => s.linkMember);
+
   const memberProfile = members.find(m => m.id === memberId);
   const myContributions = records.filter(r => r.memberId === memberId);
   const myMinistryLinks = ministryMembers.filter(mm => mm.memberId === memberId);
-  const myMinistries = ministries.filter(min => 
+  const myMinistries = ministries.filter(min =>
     myMinistryLinks.some(link => link.ministryId === min.id)
   );
+
+  const otherMinistries = ministries.filter(min =>
+    !myMinistryLinks.some(link => link.ministryId === min.id)
+  );
+
   const totalDonated = myContributions.reduce((acc, curr) => acc + curr.amount, 0);
+  const handleJoinMinistry = async (minId: string) => {
+    if (!memberId) return;
+    try {
+      const res = await api<any>('/api/ministry-members', {
+        method: 'POST',
+        body: JSON.stringify({ memberId, ministryId: minId, role: 'member' })
+      });
+      linkMember(res);
+      toast.success("Solicitação enviada!");
+    } catch (e) {
+      toast.error("Erro ao solicitar participação.");
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="py-8 md:py-12">
@@ -76,6 +99,29 @@ export default function MemberDashboardPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Ministry Explorer section */}
+          <div className="md:col-span-2">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <Heart className="h-5 w-5 text-rose-500" /> Descobrir Ministérios
+            </h2>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {otherMinistries.map(min => (
+                <Card key={min.id} className="border-slate-200 hover:shadow-soft transition-all">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">{min.name}</CardTitle>
+                    <CardDescription className="text-xs line-clamp-2">{min.description}</CardDescription>
+                  </CardHeader>
+                  <CardFooter className="pt-2">
+                    <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => handleJoinMinistry(min.id)}>
+                      Quero Participar
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          </div>
+
           {/* Main Feed Column */}
           <div className="md:col-span-2 space-y-8">
             <div>
