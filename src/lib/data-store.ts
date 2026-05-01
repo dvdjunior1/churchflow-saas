@@ -1,14 +1,16 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import type { Member, Ministry, MinistryMember, FinancialRecord, ChurchEvent } from '@shared/types';
+import type { Member, Ministry, MinistryMember, FinancialRecord, ChurchEvent, Position } from '@shared/types';
 interface DataState {
   members: Member[];
   ministries: Ministry[];
   ministryMembers: MinistryMember[];
   financialRecords: FinancialRecord[];
   events: ChurchEvent[];
+  positions: Position[];
   lastUpdated: string;
+  // Actions
   setMembers: (members: Member[]) => void;
   addMember: (member: Partial<Member>) => Member;
   updateMember: (id: string, updates: Partial<Member>) => void;
@@ -20,6 +22,11 @@ interface DataState {
   setMinistryMembers: (items: MinistryMember[]) => void;
   linkMember: (item: Omit<MinistryMember, 'id'>) => MinistryMember;
   unlinkMember: (id: string) => void;
+  updateMinistryMember: (id: string, updates: Partial<MinistryMember>) => void;
+  setPositions: (positions: Position[]) => void;
+  addPosition: (pos: Omit<Position, 'id' | 'createdAt' | 'updatedAt' | 'active'>) => Position;
+  updatePosition: (id: string, updates: Partial<Position>) => void;
+  deactivatePosition: (id: string) => void;
   setFinancialRecords: (records: FinancialRecord[]) => void;
   addFinancialRecord: (record: Omit<FinancialRecord, 'id'>) => FinancialRecord;
   deleteFinancialRecord: (id: string) => void;
@@ -37,6 +44,7 @@ export const useDataStore = create<DataState>()(
       ministryMembers: [],
       financialRecords: [],
       events: [],
+      positions: [],
       lastUpdated: new Date().toISOString(),
       setMembers: (members) => set({ members, lastUpdated: new Date().toISOString() }),
       addMember: (data) => {
@@ -47,6 +55,7 @@ export const useDataStore = create<DataState>()(
           photoUrl: "",
           birthDate: "",
           role: "Membro",
+          positions: [],
           memberStatus: "ativo",
           showBirthdayPublic: false,
           ...data,
@@ -90,6 +99,30 @@ export const useDataStore = create<DataState>()(
         ministryMembers: state.ministryMembers.filter(mm => mm.id !== id),
         lastUpdated: new Date().toISOString()
       })),
+      updateMinistryMember: (id, updates) => set((state) => ({
+        ministryMembers: state.ministryMembers.map(mm => mm.id === id ? { ...mm, ...updates } : mm),
+        lastUpdated: new Date().toISOString()
+      })),
+      setPositions: (positions) => set({ positions, lastUpdated: new Date().toISOString() }),
+      addPosition: (data) => {
+        const pos: Position = {
+          ...data,
+          id: uuidv4(),
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        set((state) => ({ positions: [...state.positions, pos], lastUpdated: new Date().toISOString() }));
+        return pos;
+      },
+      updatePosition: (id, updates) => set((state) => ({
+        positions: state.positions.map(p => p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p),
+        lastUpdated: new Date().toISOString()
+      })),
+      deactivatePosition: (id) => set((state) => ({
+        positions: state.positions.map(p => p.id === id ? { ...p, active: false, updatedAt: new Date().toISOString() } : p),
+        lastUpdated: new Date().toISOString()
+      })),
       setFinancialRecords: (records) => set({ financialRecords: records, lastUpdated: new Date().toISOString() }),
       addFinancialRecord: (data) => {
         const record: FinancialRecord = { ...data, id: uuidv4() };
@@ -116,7 +149,23 @@ export const useDataStore = create<DataState>()(
       })),
       seedIfEmpty: () => {
         const state = get();
-        if (state.members.length > 0) return;
+        if (state.members.length > 0 || state.positions.length > 0) return;
+        const nowStr = new Date().toISOString();
+        // Seed Positions
+        const seedPositions: Position[] = [
+          // Church Scope
+          { id: 'pos-p', name: 'Pastor', description: 'Liderança espiritual geral', scope: 'church', active: true, createdAt: nowStr, updatedAt: nowStr },
+          { id: 'pos-d', name: 'Diácono', description: 'Serviço e auxílio nas atividades', scope: 'church', active: true, createdAt: nowStr, updatedAt: nowStr },
+          { id: 'pos-s', name: 'Secretário(a)', description: 'Gestão documental e registros', scope: 'church', active: true, createdAt: nowStr, updatedAt: nowStr },
+          { id: 'pos-t', name: 'Tesoureiro(a)', description: 'Gestão financeira e balanços', scope: 'church', active: true, createdAt: nowStr, updatedAt: nowStr },
+          { id: 'pos-p-m', name: 'Presbítero', description: 'Conselho e doutrina', scope: 'church', active: true, createdAt: nowStr, updatedAt: nowStr },
+          // Ministry Scope
+          { id: 'pos-l-l', name: 'Líder de Louvor', description: 'Coordenação da equipe de música', scope: 'ministry', active: true, createdAt: nowStr, updatedAt: nowStr },
+          { id: 'pos-i', name: 'Instrumentista', description: 'Músico da equipe', scope: 'ministry', active: true, createdAt: nowStr, updatedAt: nowStr },
+          { id: 'pos-m-k', name: 'Monitor Kids', description: 'Ensino bíblico infantil', scope: 'ministry', active: true, createdAt: nowStr, updatedAt: nowStr },
+          { id: 'pos-v', name: 'Vocalista', description: 'Backing vocal ou solista', scope: 'ministry', active: true, createdAt: nowStr, updatedAt: nowStr },
+          { id: 'pos-o-s', name: 'Operador de Som', description: 'Suporte técnico e áudio', scope: 'ministry', active: true, createdAt: nowStr, updatedAt: nowStr },
+        ];
         const m1Id = uuidv4();
         const m2Id = uuidv4();
         const min1Id = uuidv4();
@@ -131,7 +180,8 @@ export const useDataStore = create<DataState>()(
             birthDate: "1985-05-15",
             baptismDate: "2010-10-20",
             role: "Pastor",
-            joinedAt: new Date().toISOString(),
+            positions: ['pos-p'],
+            joinedAt: nowStr,
             memberStatus: "ativo",
             city: "São Paulo",
             state: "SP"
@@ -144,7 +194,8 @@ export const useDataStore = create<DataState>()(
             photoUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maria",
             birthDate: "1992-08-22",
             role: "Líder de Louvor",
-            joinedAt: new Date().toISOString(),
+            positions: ['pos-d'],
+            joinedAt: nowStr,
             memberStatus: "ativo",
             city: "Rio de Janeiro",
             state: "RJ"
@@ -155,17 +206,18 @@ export const useDataStore = create<DataState>()(
           { id: min2Id, name: "Kids", description: "Ministério infantil" }
         ];
         const seedMM: MinistryMember[] = [
-          { id: uuidv4(), memberId: m2Id, ministryId: min1Id, role: 'leader' },
-          { id: uuidv4(), memberId: m1Id, ministryId: min2Id, role: 'member' }
+          { id: uuidv4(), memberId: m2Id, ministryId: min1Id, role: 'leader', positionId: 'pos-l-l' },
+          { id: uuidv4(), memberId: m1Id, ministryId: min2Id, role: 'member', positionId: 'pos-m-k' }
         ];
         set({
+          positions: seedPositions,
           members: seedMembers,
           ministries: seedMinistries,
           ministryMembers: seedMM,
-          lastUpdated: new Date().toISOString()
+          lastUpdated: nowStr
         });
       }
     }),
-    { name: 'churchflow-local-storage-v1' }
+    { name: 'churchflow-local-storage-v2' }
   )
 );

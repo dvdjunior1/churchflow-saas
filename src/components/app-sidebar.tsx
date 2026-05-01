@@ -8,11 +8,11 @@ import {
   LogOut,
   Sparkles,
   ChevronUp,
-  UserCircle,
   Banknote,
   Calendar,
   FileBarChart,
-  Wallet
+  Wallet,
+  Briefcase
 } from "lucide-react";
 import {
   Sidebar,
@@ -31,7 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuthStore } from "@/lib/auth-store";
 import { toast } from "sonner";
 export function AppSidebar(): JSX.Element {
@@ -48,6 +48,7 @@ export function AppSidebar(): JSX.Element {
   const adminNavItems = [
     { title: "Dashboard", icon: Home, url: "/admin" },
     { title: "Membros", icon: Users, url: "/admin/members" },
+    { title: "Cargos", icon: Briefcase, url: "/admin/positions" },
     { title: "Ministérios", icon: Heart, url: "/admin/ministries" },
     { title: "Agenda", icon: Calendar, url: "/admin/events" },
     { title: "Financeiro", icon: Banknote, url: "/admin/finance" },
@@ -55,7 +56,7 @@ export function AppSidebar(): JSX.Element {
   ];
   const memberNavItems = [
     { title: "Meu Dashboard", icon: Home, url: "/member/dashboard" },
-    { title: "Agenda", icon: Calendar, url: "/admin/events" }, // Shared access
+    { title: "Agenda", icon: Calendar, url: "/admin/events" },
     { title: "Contribuições", icon: Wallet, url: "/member/donations" },
   ];
   const navItems = isAdmin ? adminNavItems : memberNavItems;
@@ -102,7 +103,7 @@ export function AppSidebar(): JSX.Element {
           </SidebarMenu>
         </SidebarGroup>
         <div className="px-6 py-2 text-[10px] text-muted-foreground/40 font-mono tracking-tighter">
-          v1.0.0-final
+          v1.1.0-pos
         </div>
       </SidebarContent>
       <SidebarFooter className="p-4 border-t border-slate-200">

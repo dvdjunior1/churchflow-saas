@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Briefcase, Plus, Search, Filter, Save, MoreHorizontal, CheckCircle2, XCircle, RefreshCw } from 'lucide-react';
+import { Briefcase, Plus, Search, Filter, Save, MoreHorizontal, CheckCircle2, XCircle } from 'lucide-react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -52,7 +52,7 @@ const positionSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
   description: z.string().optional(),
   scope: z.enum(['church', 'ministry']),
-  active: z.boolean(),
+  active: z.boolean().default(true),
 });
 type FormValues = z.infer<typeof positionSchema>;
 export function PositionsPage() {
@@ -64,7 +64,6 @@ export function PositionsPage() {
   const addPosition = useDataStore(s => s.addPosition);
   const updatePosition = useDataStore(s => s.updatePosition);
   const deactivatePosition = useDataStore(s => s.deactivatePosition);
-  const seedIfEmpty = useDataStore(s => s.seedIfEmpty);
   const form = useForm<FormValues>({
     resolver: zodResolver(positionSchema),
     defaultValues: {
@@ -77,19 +76,10 @@ export function PositionsPage() {
   const onSubmit: SubmitHandler<FormValues> = (values) => {
     try {
       if (editingPos) {
-        updatePosition(editingPos.id, {
-          name: values.name,
-          description: values.description,
-          scope: values.scope,
-          active: values.active,
-        });
+        updatePosition(editingPos.id, values);
         toast.success('Cargo atualizado com sucesso');
       } else {
-        addPosition({
-          name: values.name,
-          description: values.description,
-          scope: values.scope,
-        });
+        addPosition(values);
         toast.success('Cargo criado com sucesso');
       }
       setIsDialogOpen(false);
@@ -103,15 +93,15 @@ export function PositionsPage() {
     setEditingPos(pos);
     form.reset({
       name: pos.name,
-      description: pos.description || '',
+      description: pos.description,
       scope: pos.scope,
       active: pos.active,
     });
     setIsDialogOpen(true);
   };
   const filteredPositions = positions.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
-                          (p.description?.toLowerCase() || '').includes(search.toLowerCase());
+    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
+                          p.description.toLowerCase().includes(search.toLowerCase());
     const matchesScope = scopeFilter === 'all' || p.scope === scopeFilter;
     return matchesSearch && matchesScope;
   });
@@ -122,15 +112,10 @@ export function PositionsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Cargos & Funções</h1>
           <p className="text-muted-foreground">Defina a estrutura hierárquica e operacional da igreja.</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="icon" onClick={() => { seedIfEmpty(); toast.info("Verificando sementes de dados..."); }}>
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-          <Button className="btn-gradient" onClick={() => { setEditingPos(null); form.reset(); setIsDialogOpen(true); }}>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Cargo
-          </Button>
-        </div>
+        <Button className="btn-gradient" onClick={() => { setEditingPos(null); form.reset(); setIsDialogOpen(true); }}>
+          <Plus className="mr-2 h-4 w-4" />
+          Novo Cargo
+        </Button>
       </div>
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1 max-w-sm">
@@ -142,17 +127,19 @@ export function PositionsPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select value={scopeFilter} onValueChange={(val: any) => setScopeFilter(val)}>
-          <SelectTrigger className="w-[180px]">
-            <Filter className="mr-2 h-4 w-4" />
-            <SelectValue placeholder="Escopo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos Escopos</SelectItem>
-            <SelectItem value="church">Geral (Igreja)</SelectItem>
-            <SelectItem value="ministry">Ministério</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Select value={scopeFilter} onValueChange={(val: any) => setScopeFilter(val)}>
+            <SelectTrigger className="w-[180px]">
+              <Filter className="mr-2 h-4 w-4" />
+              <SelectValue placeholder="Escopo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos Escopos</SelectItem>
+              <SelectItem value="church">Geral (Igreja)</SelectItem>
+              <SelectItem value="ministry">Ministério</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       <div className="rounded-xl border bg-card shadow-soft overflow-hidden">
         <Table>
@@ -168,12 +155,8 @@ export function PositionsPage() {
           <TableBody>
             {filteredPositions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-20">
-                  <div className="flex flex-col items-center gap-3">
-                    <Briefcase className="h-10 w-10 text-muted-foreground/20" />
-                    <p className="text-muted-foreground">Nenhum cargo encontrado.</p>
-                    <p className="text-xs text-muted-foreground/60">Cargos padrão podem ser restaurados usando o sistema de sementes.</p>
-                  </div>
+                <TableCell colSpan={5} className="text-center py-12 text-muted-foreground italic">
+                  Nenhum cargo encontrado para os filtros selecionados.
                 </TableCell>
               </TableRow>
             ) : (
@@ -210,10 +193,10 @@ export function PositionsPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleEdit(pos)}>Editar</DropdownMenuItem>
                         {pos.active ? (
-                          <DropdownMenuItem
+                          <DropdownMenuItem 
                             className="text-destructive focus:text-destructive"
                             onClick={() => {
-                              if (confirm('Deseja desativar este cargo?')) {
+                              if (confirm('Deseja desativar este cargo? Ele não poderá ser mais selecionado em novos cadastros.')) {
                                 deactivatePosition(pos.id);
                                 toast.info('Cargo desativado');
                               }
@@ -264,6 +247,9 @@ export function PositionsPage() {
                       <SelectItem value="ministry">Ministério (Específico de grupos)</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormDescription>
+                    "Geral" aparece no cadastro do membro. "Ministério" aparece na gestão de equipes.
+                  </FormDescription>
                 </FormItem>
               )} />
               <FormField control={form.control} name="description" render={({ field }) => (
@@ -277,6 +263,7 @@ export function PositionsPage() {
                 <FormItem className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
                     <FormLabel>Ativo</FormLabel>
+                    <FormDescription className="text-xs">Disponível para seleção</FormDescription>
                   </div>
                   <FormControl>
                     <Switch checked={field.value} onCheckedChange={field.onChange} />

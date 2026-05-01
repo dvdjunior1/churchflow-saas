@@ -10,6 +10,15 @@ export interface AuthUser {
   role: 'admin' | 'pastor' | 'staff' | 'member';
   memberId?: string;
 }
+export interface Position {
+  id: string;
+  name: string;
+  description: string;
+  scope: 'church' | 'ministry';
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 export interface Member {
   id: string;
   fullName: string;
@@ -18,7 +27,8 @@ export interface Member {
   photoUrl: string;
   birthDate: string; // ISO
   baptismDate?: string; // ISO
-  role: string;
+  role: string; // Legacy field, keeping for compat
+  positions?: string[]; // Array of Position IDs (church scope)
   joinedAt: string; // ISO
   whatsapp?: string;
   alternatePhone?: string;
@@ -46,6 +56,7 @@ export interface MinistryMember {
   memberId: string;
   ministryId: string;
   role: 'leader' | 'member';
+  positionId?: string; // Specific role within this ministry
 }
 export interface ChurchEvent {
   id: string;

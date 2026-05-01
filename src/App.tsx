@@ -8,6 +8,7 @@ import { LoginPage } from '@/pages/auth/LoginPage';
 import { DashboardPage } from '@/pages/admin/DashboardPage';
 import { MembersPage } from '@/pages/admin/MembersPage';
 import { MinistriesPage } from '@/pages/admin/MinistriesPage';
+import { PositionsPage } from '@/pages/admin/PositionsPage';
 import ProfilePage from '@/pages/shared/ProfilePage';
 import { FinancialPage } from '@/pages/admin/FinancialPage';
 import { EventsPage } from '@/pages/admin/EventsPage';
@@ -43,6 +44,7 @@ const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       { path: "members", element: <MembersPage /> },
       { path: "ministries", element: <MinistriesPage /> },
+      { path: "positions", element: <PositionsPage /> },
       { path: "finance", element: <FinancialPage /> },
       { path: "events", element: <EventsPage /> },
       { path: "reports", element: <ReportsPage /> },

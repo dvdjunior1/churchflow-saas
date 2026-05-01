@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, MoreHorizontal, Filter, UserCircle, Save, Camera, Cake } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Plus, Search, MoreHorizontal, Filter, UserCircle, Save, Camera, Cake, Briefcase } from 'lucide-react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
   TableBody,
@@ -37,6 +38,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import {
   Select,
@@ -48,6 +50,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 const memberSchema = z.object({
   fullName: z.string().min(3, "Nome muito curto"),
@@ -55,8 +58,9 @@ const memberSchema = z.object({
   phone: z.string().min(10, "Telefone inválido"),
   birthDate: z.string().min(1, "Data de nascimento obrigatória"),
   baptismDate: z.string().optional(),
-  role: z.string().min(2, "Cargo obrigatório"),
-  photoUrl: z.string().optional(), // Now optional
+  role: z.string().optional(), 
+  positions: z.array(z.string()).optional(),
+  photoUrl: z.string().optional(),
   whatsapp: z.string().optional(),
   alternatePhone: z.string().optional(),
   gender: z.enum(['M', 'F', 'O']),
@@ -81,6 +85,10 @@ export function MembersPage() {
   const addMember = useDataStore(s => s.addMember);
   const updateMemberAction = useDataStore(s => s.updateMember);
   const deleteMemberAction = useDataStore(s => s.deleteMember);
+  const allPositions = useDataStore(s => s.positions);
+  const activeChurchPositions = useMemo(() => 
+    allPositions.filter(p => p.active && p.scope === 'church'),
+  [allPositions]);
   const form = useForm<FormValues>({
     resolver: zodResolver(memberSchema),
     defaultValues: {
@@ -90,6 +98,7 @@ export function MembersPage() {
       birthDate: '',
       baptismDate: '',
       role: 'Membro',
+      positions: [],
       photoUrl: '',
       whatsapp: '',
       alternatePhone: '',
@@ -116,6 +125,7 @@ export function MembersPage() {
         birthDate: editingMember.birthDate || '',
         baptismDate: editingMember.baptismDate || '',
         role: editingMember.role || 'Membro',
+        positions: editingMember.positions || [],
         photoUrl: editingMember.photoUrl || '',
         whatsapp: editingMember.whatsapp || '',
         alternatePhone: editingMember.alternatePhone || '',
@@ -140,6 +150,7 @@ export function MembersPage() {
         birthDate: '',
         baptismDate: '',
         role: 'Membro',
+        positions: [],
         photoUrl: '',
         whatsapp: '',
         alternatePhone: '',
@@ -170,7 +181,6 @@ export function MembersPage() {
   }, [form]);
   const onSubmit: SubmitHandler<FormValues> = (values) => {
     try {
-      // Dynamic DiceBear seed fallback if photoUrl is missing
       const finalPhoto = values.photoUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(values.fullName)}`;
       const payload = { ...values, photoUrl: finalPhoto };
       if (editingMember) {
@@ -189,8 +199,7 @@ export function MembersPage() {
   const filteredMembers = members.filter(m =>
     m.fullName.toLowerCase().includes(search.toLowerCase()) ||
     m.email.toLowerCase().includes(search.toLowerCase()) ||
-    (m.memberStatus || '').toLowerCase().includes(search.toLowerCase()) ||
-    (m.city || '').toLowerCase().includes(search.toLowerCase())
+    (m.memberStatus || '').toLowerCase().includes(search.toLowerCase())
   );
   const getStatusBadge = (status?: string) => {
     switch (status) {
@@ -200,6 +209,10 @@ export function MembersPage() {
       case 'transferido': return <Badge variant="outline">Transferido</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
     }
+  };
+  const getPositionNames = (ids?: string[]) => {
+    if (!ids || ids.length === 0) return null;
+    return ids.map(id => allPositions.find(p => p.id === id)?.name).filter(Boolean).join(', ');
   };
   return (
     <div className="space-y-6">
@@ -217,7 +230,7 @@ export function MembersPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nome, e-mail, status ou cidade..."
+            placeholder="Buscar por nome, e-mail, status..."
             className="pl-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -232,8 +245,8 @@ export function MembersPage() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-[300px]">Membro</TableHead>
+              <TableHead>Cargos (Geral)</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Localização</TableHead>
               <TableHead>Contato</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -259,10 +272,16 @@ export function MembersPage() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>{getStatusBadge(member.memberStatus)}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {member.city && member.neighborhood ? `${member.neighborhood}, ${member.city}` : member.city || 'N/A'}
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1 max-w-[200px]">
+                      {member.positions?.map(pid => {
+                        const pname = allPositions.find(p => p.id === pid)?.name;
+                        return pname ? <Badge key={pid} variant="outline" className="text-[10px] py-0">{pname}</Badge> : null;
+                      })}
+                      {!member.positions?.length && <span className="text-xs text-slate-300 italic">Nenhum</span>}
+                    </div>
                   </TableCell>
+                  <TableCell>{getStatusBadge(member.memberStatus)}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{member.phone}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
@@ -276,7 +295,7 @@ export function MembersPage() {
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
                           onClick={() => {
-                            if (confirm('Remover este registro? Esta ação é permanente.')) {
+                            if (confirm('Remover este registro?')) {
                               deleteMemberAction(member.id);
                               toast.success('Membro removido');
                             }
@@ -327,9 +346,6 @@ export function MembersPage() {
                     <FormField control={form.control} name="phone" render={({ field }) => (
                       <FormItem><FormLabel>Telefone Principal *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <FormField control={form.control} name="whatsapp" render={({ field }) => (
-                      <FormItem><FormLabel>WhatsApp</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-                    )} />
                     <FormField control={form.control} name="birthDate" render={({ field }) => (
                       <FormItem><FormLabel>Data de Nascimento *</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
@@ -358,41 +374,11 @@ export function MembersPage() {
                 </div>
                 <Separator />
                 <div>
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-primary mb-4">Endereço</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField control={form.control} name="zipCode" render={({ field }) => (
-                      <FormItem><FormLabel>CEP</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-                    )} />
-                    <FormField control={form.control} name="street" render={({ field }) => (
-                      <FormItem className="md:col-span-2"><FormLabel>Logradouro</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-                    )} />
-                    <FormField control={form.control} name="number" render={({ field }) => (
-                      <FormItem><FormLabel>Número</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-                    )} />
-                    <FormField control={form.control} name="complement" render={({ field }) => (
-                      <FormItem><FormLabel>Complemento</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-                    )} />
-                    <FormField control={form.control} name="neighborhood" render={({ field }) => (
-                      <FormItem><FormLabel>Bairro</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-                    )} />
-                    <FormField control={form.control} name="city" render={({ field }) => (
-                      <FormItem className="md:col-span-2"><FormLabel>Cidade</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-                    )} />
-                    <FormField control={form.control} name="state" render={({ field }) => (
-                      <FormItem><FormLabel>Estado (UF)</FormLabel><FormControl><Input maxLength={2} {...field} /></FormControl></FormItem>
-                    )} />
-                  </div>
-                </div>
-                <Separator />
-                <div>
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-primary mb-4">Eclesiásticos</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="role" render={({ field }) => (
-                      <FormItem><FormLabel>Cargo/Função *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-primary mb-4">Eclesiásticos & Cargos</h3>
+                  <div className="grid grid-cols-1 gap-6">
                     <FormField control={form.control} name="memberStatus" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Status *</FormLabel>
+                      <FormItem className="max-w-xs">
+                        <FormLabel>Status de Membresia *</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                           <SelectContent>
@@ -402,11 +388,38 @@ export function MembersPage() {
                         </Select>
                       </FormItem>
                     )} />
-                    <FormField control={form.control} name="baptismDate" render={({ field }) => (
-                      <FormItem><FormLabel>Data de Batismo</FormLabel><FormControl><Input type="date" {...field} /></FormControl></FormItem>
-                    )} />
-                    <FormField control={form.control} name="notes" render={({ field }) => (
-                      <FormItem className="md:col-span-2"><FormLabel>Observações</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>
+                    <FormField control={form.control} name="positions" render={({ field }) => (
+                      <FormItem>
+                        <div className="mb-4">
+                          <FormLabel className="text-base flex items-center gap-2">
+                            <Briefcase className="h-4 w-4" /> Atribuições Gerais (Cargos da Igreja)
+                          </FormLabel>
+                          <FormDescription>Selecione as funções que este membro desempenha na estrutura geral.</FormDescription>
+                        </div>
+                        <ScrollArea className="h-[200px] rounded-md border p-4 bg-slate-50/50">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {activeChurchPositions.map((pos) => (
+                              <FormItem key={pos.id} className="flex flex-row items-start space-x-3 space-y-0 p-2 rounded-lg bg-white border border-slate-100 shadow-sm">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(pos.id)}
+                                    onCheckedChange={(checked) => {
+                                      const current = field.value || [];
+                                      return checked
+                                        ? field.onChange([...current, pos.id])
+                                        : field.onChange(current.filter((value) => value !== pos.id));
+                                    }}
+                                  />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                  <FormLabel className="text-sm font-medium">{pos.name}</FormLabel>
+                                  <p className="text-[10px] text-muted-foreground line-clamp-1">{pos.description}</p>
+                                </div>
+                              </FormItem>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      </FormItem>
                     )} />
                   </div>
                 </div>
@@ -414,7 +427,7 @@ export function MembersPage() {
                 <div className="flex items-center justify-between p-4 bg-muted/20 rounded-lg">
                   <div>
                     <h4 className="text-sm font-semibold">Exibir Aniversário</h4>
-                    <p className="text-xs text-muted-foreground">Permitir que outros membros vejam seu dia de aniversário no calendário.</p>
+                    <p className="text-xs text-muted-foreground">Permitir visualização pública do aniversário.</p>
                   </div>
                   <FormField control={form.control} name="showBirthdayPublic" render={({ field }) => (
                     <FormItem><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>

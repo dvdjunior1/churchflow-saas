@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Heart, Plus, Users, Search, Save, Trash2, ShieldCheck, UserPlus } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Heart, Plus, Search, Save, Trash2, ShieldCheck, UserPlus, Briefcase } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -33,6 +33,11 @@ export function MinistriesPage() {
   const ministryMembers = useDataStore(s => s.ministryMembers);
   const linkMemberAction = useDataStore(s => s.linkMember);
   const unlinkMemberAction = useDataStore(s => s.unlinkMember);
+  const updateMinistryMemberAction = useDataStore(s => s.updateMinistryMember);
+  const allPositions = useDataStore(s => s.positions);
+  const activeMinistryPositions = useMemo(() => 
+    allPositions.filter(p => p.active && p.scope === 'ministry'),
+  [allPositions]);
   const form = useForm<z.infer<typeof ministrySchema>>({
     resolver: zodResolver(ministrySchema),
     defaultValues: { name: '', description: '', leaderId: '' },
@@ -44,7 +49,6 @@ export function MinistriesPage() {
         description: values.description,
         leaderId: values.leaderId || undefined
       });
-      // If leader selected, auto-link
       if (values.leaderId) {
         linkMemberAction({ memberId: values.leaderId, ministryId: newMin.id, role: 'leader' });
       }
@@ -64,6 +68,10 @@ export function MinistriesPage() {
       linkMemberAction({ memberId, ministryId, role: 'member' });
       toast.success('Membro adicionado ao ministério');
     }
+  };
+  const updateMemberPos = (mmId: string, positionId: string) => {
+    updateMinistryMemberAction(mmId, { positionId: positionId === 'none' ? undefined : positionId });
+    toast.success('Função atualizada');
   };
   const getMinistryMemberCount = (minId: string) => {
     return ministryMembers.filter(mm => mm.ministryId === minId).length;
@@ -178,7 +186,7 @@ export function MinistriesPage() {
         <SheetContent className="sm:max-w-md">
           <SheetHeader>
             <SheetTitle>Equipe: {managingMinistry?.name}</SheetTitle>
-            <SheetDescription>Vincule membros diretamente pelo painel local.</SheetDescription>
+            <SheetDescription>Vincule membros e atribua funções específicas para este grupo.</SheetDescription>
           </SheetHeader>
           <div className="mt-6 space-y-4">
             <div className="relative">
@@ -190,42 +198,31 @@ export function MinistriesPage() {
                 onChange={(e) => setMemberSearch(e.target.value)}
               />
             </div>
-            <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-2">
+            <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-2">
               {members
                 .filter(m => m.fullName.toLowerCase().includes(memberSearch.toLowerCase()))
                 .map(m => {
                   const mm = ministryMembers.find(item => item.memberId === m.id && item.ministryId === managingMinistry?.id);
                   const isMember = !!mm;
                   const isLeader = mm?.role === 'leader';
+                  const currentPos = allPositions.find(p => p.id === mm?.positionId);
                   return (
-                    <div key={m.id} className="flex items-center justify-between p-2 rounded-lg border hover:bg-slate-50 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={m.photoUrl} />
-                          <AvatarFallback>{m.fullName.substring(0,2).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium">{m.fullName}</span>
-                          <div className="flex gap-1 items-center">
-                            <span className="text-[10px] text-muted-foreground">{m.role}</span>
-                            {isLeader && <ShieldCheck className="h-3 w-3 text-primary" />}
+                    <div key={m.id} className="flex flex-col p-3 rounded-lg border hover:bg-slate-50 transition-colors gap-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={m.photoUrl} />
+                            <AvatarFallback>{m.fullName.substring(0,2).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium">{m.fullName}</span>
+                            <div className="flex gap-1 items-center">
+                              <span className="text-[10px] text-muted-foreground">{m.role}</span>
+                              {isLeader && <ShieldCheck className="h-3 w-3 text-primary" />}
+                              {currentPos && <Badge variant="outline" className="text-[9px] py-0">{currentPos.name}</Badge>}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {isMember && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className={`h-8 px-2 ${isLeader ? 'text-primary' : 'text-slate-400'}`}
-                            onClick={() => {
-                              updateMinistryAction(managingMinistry!.id, { leaderId: isLeader ? undefined : m.id });
-                              toast.success(isLeader ? 'Liderança removida' : 'Liderança atribuída');
-                            }}
-                          >
-                             <ShieldCheck className="h-4 w-4" />
-                          </Button>
-                        )}
                         <Button
                           size="sm"
                           variant={isMember ? "outline" : "default"}
@@ -235,6 +232,39 @@ export function MinistriesPage() {
                           {isMember ? 'Remover' : 'Adicionar'}
                         </Button>
                       </div>
+                      {isMember && (
+                        <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                          <div className="flex items-center gap-2">
+                             <Button
+                              size="xs"
+                              variant="ghost"
+                              className={`h-7 px-2 text-[10px] ${isLeader ? 'text-primary' : 'text-slate-400'}`}
+                              onClick={() => {
+                                updateMinistryAction(managingMinistry!.id, { leaderId: isLeader ? undefined : m.id });
+                                updateMinistryMemberAction(mm.id, { role: isLeader ? 'member' : 'leader' });
+                                toast.success(isLeader ? 'Liderança removida' : 'Liderança atribuída');
+                              }}
+                            >
+                               <ShieldCheck className="h-3 w-3 mr-1" /> Líder
+                            </Button>
+                          </div>
+                          <Select 
+                            value={mm.positionId || 'none'} 
+                            onValueChange={(val) => updateMemberPos(mm.id, val)}
+                          >
+                            <SelectTrigger className="h-7 text-[10px] bg-white">
+                              <Briefcase className="h-3 w-3 mr-1" />
+                              <SelectValue placeholder="Função" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Sem função específica</SelectItem>
+                              {activeMinistryPositions.map(p => (
+                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
