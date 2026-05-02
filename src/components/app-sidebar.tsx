@@ -34,6 +34,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuthStore } from "@/lib/auth-store";
+import { canAccess, Resource } from "@/lib/perms";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 export function AppSidebar(): JSX.Element {
   const navigate = useNavigate();
@@ -45,38 +47,39 @@ export function AppSidebar(): JSX.Element {
     toast.info("Logout realizado com sucesso.");
     navigate("/");
   };
-  // Include 'leader' in administrative navigation access
-  const isAdmin = user?.role && ['admin', 'pastor', 'staff', 'leader'].includes(user.role);
-  const adminNavItems = [
-    { title: "Dashboard", icon: Home, url: "/admin" },
-    { title: "Membros", icon: Users, url: "/admin/members" },
-    { title: "Cargos", icon: Briefcase, url: "/admin/positions" },
-    { title: "Ministérios", icon: Heart, url: "/admin/ministries" },
-    { title: "Atividades", icon: ListTodo, url: "/admin/activities" },
-    { title: "Agenda", icon: Calendar, url: "/admin/events" },
-    { title: "Financeiro", icon: Banknote, url: "/admin/finance" },
-    { title: "Relatórios", icon: FileBarChart, url: "/admin/reports" },
+  const isAdminOrPrivileged = user?.role && ['admin', 'pastor', 'staff', 'leader'].includes(user.role);
+  const allNavItems = [
+    { title: "Dashboard", icon: Home, url: "/admin", resource: 'dashboard' as Resource },
+    { title: "Membros", icon: Users, url: "/admin/members", resource: 'members' as Resource },
+    { title: "Cargos", icon: Briefcase, url: "/admin/positions", resource: 'positions' as Resource },
+    { title: "Ministérios", icon: Heart, url: "/admin/ministries", resource: 'ministries' as Resource },
+    { title: "Atividades", icon: ListTodo, url: "/admin/activities", resource: 'activities' as Resource },
+    { title: "Agenda", icon: Calendar, url: "/admin/events", resource: 'events' as Resource },
+    { title: "Financeiro", icon: Banknote, url: "/admin/finance", resource: 'finance' as Resource },
+    { title: "Relatórios", icon: FileBarChart, url: "/admin/reports", resource: 'reports' as Resource },
   ];
   const memberNavItems = [
     { title: "Meu Dashboard", icon: Home, url: "/member/dashboard" },
     { title: "Agenda", icon: Calendar, url: "/admin/events" },
     { title: "Contribuições", icon: Wallet, url: "/member/donations" },
   ];
-  const navItems = isAdmin ? adminNavItems : memberNavItems;
+  const navItems = isAdminOrPrivileged 
+    ? allNavItems.filter(item => canAccess(user, item.resource))
+    : memberNavItems;
   return (
     <Sidebar collapsible="icon" className="border-r border-slate-200">
       <SidebarHeader className="h-16 flex items-center px-4">
-        <Link to={isAdmin ? "/admin" : "/member/dashboard"} className="flex items-center gap-3">
+        <Link to={isAdminOrPrivileged ? "/admin" : "/member/dashboard"} className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
             <Sparkles className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-bold text-lg tracking-tight group-data-[collapsible=icon]:hidden text-foreground">ChurchFlow</span>
+          <span className="font-bold text-lg tracking-tight group-data-[collapsible=icon]:hidden text-foreground text-nowrap">ChurchFlow</span>
         </Link>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
-            {isAdmin ? "Administração" : "Painel do Membro"}
+            {isAdminOrPrivileged ? "Administração" : "Painel do Membro"}
           </SidebarGroupLabel>
           <SidebarMenu>
             {navItems.map((item) => (
@@ -105,9 +108,6 @@ export function AppSidebar(): JSX.Element {
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
-        <div className="px-6 py-2 text-[10px] text-muted-foreground/40 font-mono tracking-tighter">
-          v1.5.0-local-auth
-        </div>
       </SidebarContent>
       <SidebarFooter className="p-4 border-t border-slate-200">
         <DropdownMenu>
@@ -117,7 +117,12 @@ export function AppSidebar(): JSX.Element {
                 <AvatarFallback>{user?.name?.substring(0, 2).toUpperCase() || "CF"}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col text-left group-data-[collapsible=icon]:hidden overflow-hidden flex-1">
-                <span className="text-sm font-medium truncate text-foreground">{user?.name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium truncate text-foreground">{user?.name}</span>
+                  {user?.role === 'leader' && (
+                    <Badge variant="outline" className="h-4 px-1 text-[8px] uppercase border-blue-200 text-blue-600">Líder</Badge>
+                  )}
+                </div>
                 <span className="text-xs text-muted-foreground truncate capitalize">{user?.role}</span>
               </div>
               <ChevronUp className="ml-auto h-4 w-4 group-data-[collapsible=icon]:hidden text-muted-foreground" />
@@ -125,7 +130,7 @@ export function AppSidebar(): JSX.Element {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 mb-2">
             <DropdownMenuItem asChild>
-              <Link to={isAdmin ? "/admin/profile" : "/member/profile"}>Meu Perfil</Link>
+              <Link to={isAdminOrPrivileged ? "/admin/profile" : "/member/profile"}>Meu Perfil</Link>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive focus:bg-destructive/10">
               <LogOut className="mr-2 h-4 w-4" />

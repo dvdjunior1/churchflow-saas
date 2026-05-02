@@ -1,39 +1,30 @@
-import type { AuthUser, MinistryMember } from '@shared/types';
-export type Resource =
-  | 'dashboard'
-  | 'members'
-  | 'ministries'
-  | 'positions'
-  | 'activities'
-  | 'events'
-  | 'finance'
-  | 'reports'
-  | 'profile'
+import { useDataStore } from './data-store';
+import type { AuthUser } from '@shared/types';
+export type Resource = 
+  | 'dashboard' 
+  | 'members' 
+  | 'ministries' 
+  | 'positions' 
+  | 'activities' 
+  | 'events' 
+  | 'finance' 
+  | 'reports' 
+  | 'profile' 
   | 'settings';
 /**
  * Checks if a member is a leader in a specific ministry.
- * Pure function: logic depends only on arguments.
  */
-export function isLeaderInMin(
-  ministryMembers: MinistryMember[],
-  ministryId: string | undefined,
-  memberId: string | undefined
-): boolean {
+export function isLeaderInMin(ministryId: string | undefined, memberId: string | undefined): boolean {
   if (!ministryId || !memberId) return false;
-  return ministryMembers.some(
+  const state = useDataStore.getState();
+  return state.ministryMembers.some(
     mm => mm.ministryId === ministryId && mm.memberId === memberId && mm.role === 'leader'
   );
 }
 /**
  * Centralized RBAC logic.
- * Pure function: logic depends only on arguments.
  */
-export function canAccess(
-  user: AuthUser | null,
-  ministryMembers: MinistryMember[],
-  resource: Resource,
-  resourceId?: string
-): boolean {
+export function canAccess(user: AuthUser | null, resource: Resource, resourceId?: string): boolean {
   if (!user) return false;
   const { role } = user;
   // Administrators have god-mode
@@ -45,7 +36,7 @@ export function canAccess(
     if (!allowed.includes(resource)) return false;
     // Resource-specific ownership checks (if ID is provided)
     if (resource === 'ministries' && resourceId) {
-      return isLeaderInMin(ministryMembers, resourceId, user.memberId);
+      return isLeaderInMin(resourceId, user.memberId);
     }
     return true;
   }
@@ -58,14 +49,11 @@ export function canAccess(
 }
 /**
  * Helper to get all ministry IDs where the user is a leader.
- * Pure function.
  */
-export function getManagedMinistryIds(
-  ministryMembers: MinistryMember[],
-  memberId: string | undefined
-): string[] {
+export function getManagedMinistryIds(memberId: string | undefined): string[] {
   if (!memberId) return [];
-  return ministryMembers
+  const state = useDataStore.getState();
+  return state.ministryMembers
     .filter(mm => mm.memberId === memberId && mm.role === 'leader')
     .map(mm => mm.ministryId);
 }

@@ -2,25 +2,32 @@ import React from 'react';
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuthStore } from '@/lib/auth-store';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { canAccess, Resource } from '@/lib/perms';
 export const AuthGuard = () => {
   const user = useAuthStore(s => s.user);
   const location = useLocation();
   if (!user) {
     return <Navigate to="/login" replace />;
   }
-  const isAdminRoute = location.pathname.startsWith('/admin');
-  const isMemberRoute = location.pathname.startsWith('/member');
-  // Expanded role list for administrative access
-  const isPrivileged = ['admin', 'pastor', 'staff', 'leader'].includes(user.role);
-  const isMember = user.role === 'member';
-  // Cross-role protection
-  if (isAdminRoute && !isPrivileged) {
-    return <Navigate to="/member/dashboard" replace />;
-  }
-  if (isMemberRoute && !isMember && !isPrivileged) {
+  const path = location.pathname;
+  // Map paths to Resource types for permission checking
+  let resource: Resource = 'dashboard';
+  if (path.includes('/members')) resource = 'members';
+  else if (path.includes('/ministries')) resource = 'ministries';
+  else if (path.includes('/positions')) resource = 'positions';
+  else if (path.includes('/activities')) resource = 'activities';
+  else if (path.includes('/events')) resource = 'events';
+  else if (path.includes('/finance')) resource = 'finance';
+  else if (path.includes('/reports')) resource = 'reports';
+  else if (path.includes('/profile')) resource = 'profile';
+  const hasAccess = canAccess(user, resource);
+  if (!hasAccess) {
+    // Redirect based on role fallback
+    if (user.role === 'member') {
+      return <Navigate to="/member/dashboard" replace />;
+    }
     return <Navigate to="/admin" replace />;
   }
-  // Use AppLayout for everyone but adjust sidebar based on role inside AppLayout/Sidebar
   return (
     <AppLayout container>
       <Outlet />

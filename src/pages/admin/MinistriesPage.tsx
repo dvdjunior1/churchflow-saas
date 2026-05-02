@@ -1,16 +1,18 @@
 import React, { useState, useMemo } from 'react';
-import { Heart, Plus, Search, Trash2, ShieldCheck, UserPlus, Briefcase, UserMinus, Edit2, Save } from 'lucide-react';
+import { Heart, Plus, Trash2, UserPlus, Briefcase, UserMinus, Edit2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useDataStore } from '@/lib/data-store';
+import { useAuthStore } from '@/lib/auth-store';
+import { canAccess, isLeaderInMin } from '@/lib/perms';
 import type { Ministry } from '@shared/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent, CardFooter, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Form, FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -30,7 +32,6 @@ export function MinistriesPage() {
   const [assignMemberId, setAssignMemberId] = useState<string>("");
   const [assignPositionId, setAssignPositionId] = useState<string>("none");
   const ministries = useDataStore(s => s.ministries);
-  const activities = useDataStore(s => s.activities);
   const addMinistryAction = useDataStore(s => s.addMinistry);
   const deleteMinistryAction = useDataStore(s => s.deleteMinistry);
   const updateMinistryAction = useDataStore(s => s.updateMinistry);
@@ -38,8 +39,15 @@ export function MinistriesPage() {
   const ministryMembers = useDataStore(s => s.ministryMembers);
   const linkMemberAction = useDataStore(s => s.linkMember);
   const unlinkMemberAction = useDataStore(s => s.unlinkMember);
-  const updateMinistryMemberAction = useDataStore(s => s.updateMinistryMember);
   const allPositions = useDataStore(s => s.positions);
+  const user = useAuthStore(s => s.user);
+  const isAdmin = user?.role === 'admin' || user?.role === 'pastor';
+  const visibleMinistries = useMemo(() => {
+    if (isAdmin) return ministries;
+    return ministries.filter(min => 
+      min.leaderId === user?.memberId || isLeaderInMin(min.id, user?.memberId)
+    );
+  }, [ministries, isAdmin, user]);
   const activeMinistryPositions = useMemo(() =>
     allPositions.filter(p => p.active && p.scope === 'ministry'),
   [allPositions]);
@@ -127,30 +135,33 @@ export function MinistriesPage() {
           <h1 className="text-3xl font-bold tracking-tight">Ministérios</h1>
           <p className="text-muted-foreground">Gestão local de equipes e frentes de trabalho.</p>
         </div>
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger asChild>
-            <Button className="btn-gradient"><Plus className="mr-2 h-4 w-4" /> Novo Ministério</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Criar Ministério</DialogTitle></DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onAddSubmit)} className="space-y-4">
-                <FormField control={form.control} name="name" render={({ field }) => (
-                  <FormItem><FormLabel>Nome</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-                )} />
-                <FormField control={form.control} name="description" render={({ field }) => (
-                  <FormItem><FormLabel>Descrição</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>
-                )} />
-                <Button type="submit" className="w-full btn-gradient">Criar Ministério</Button>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        {isAdmin && (
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <DialogTrigger asChild>
+              <Button className="btn-gradient"><Plus className="mr-2 h-4 w-4" /> Novo Ministério</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Criar Ministério</DialogTitle></DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onAddSubmit)} className="space-y-4">
+                  <FormField control={form.control} name="name" render={({ field }) => (
+                    <FormItem><FormLabel>Nome</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                  )} />
+                  <FormField control={form.control} name="description" render={({ field }) => (
+                    <FormItem><FormLabel>Descrição</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>
+                  )} />
+                  <Button type="submit" className="w-full btn-gradient">Criar Ministério</Button>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {ministries.map((min) => {
+        {visibleMinistries.map((min) => {
           const leader = members.find(m => m.id === min.leaderId);
           const count = ministryMembers.filter(mm => mm.ministryId === min.id).length;
+          const canManage = canAccess(user, 'ministries', min.id);
           return (
             <Card key={min.id} className="hover:shadow-md transition-all group flex flex-col h-full border-slate-200">
               <CardHeader className="pb-3">
@@ -158,19 +169,21 @@ export function MinistriesPage() {
                   <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                     <Heart className="h-5 w-5" />
                   </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => {
-                      setEditingMinistry(min);
-                      form.reset(min);
-                    }}>
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => {
-                      if (confirm('Excluir ministério?')) deleteMinistryAction(min.id);
-                    }}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  {isAdmin && (
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => {
+                        setEditingMinistry(min);
+                        form.reset(min);
+                      }}>
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => {
+                        if (confirm('Excluir ministério?')) deleteMinistryAction(min.id);
+                      }}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <CardTitle className="text-xl">{min.name}</CardTitle>
                 <CardDescription className="line-clamp-2">{min.description}</CardDescription>
@@ -193,15 +206,19 @@ export function MinistriesPage() {
                 )}
               </CardContent>
               <CardFooter className="pt-3 border-t">
-                <Button variant="ghost" className="w-full text-xs font-semibold" onClick={() => setManagingMinistryId(min.id)}>
-                  Gerenciar Equipe
+                <Button 
+                  variant="ghost" 
+                  disabled={!canManage}
+                  className="w-full text-xs font-semibold" 
+                  onClick={() => setManagingMinistryId(min.id)}
+                >
+                  {canManage ? 'Gerenciar Equipe' : 'Acesso Restrito'}
                 </Button>
               </CardFooter>
             </Card>
           );
         })}
       </div>
-      {/* Edit Ministry Dialog */}
       <Dialog open={editingMinistry !== null} onOpenChange={(open) => !open && setEditingMinistry(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Editar Ministério</DialogTitle></DialogHeader>
@@ -218,7 +235,6 @@ export function MinistriesPage() {
           </Form>
         </DialogContent>
       </Dialog>
-      {/* Team Management Sheet */}
       <Sheet open={managingMinistryId !== null} onOpenChange={(open) => !open && setManagingMinistryId(null)}>
         <SheetContent className="sm:max-w-md flex flex-col p-0">
           <SheetHeader className="p-6 pb-2">
@@ -247,7 +263,6 @@ export function MinistriesPage() {
                 <Button className="w-full" disabled={!assignMemberId} onClick={handleAssignMember}>
                   Adicionar à Equipe
                 </Button>
-                {currentTeam.length === 0 && <p className="text-[10px] text-muted-foreground text-center">O primeiro membro adicionado será definido como líder.</p>}
               </div>
               <Separator />
               <div className="space-y-4">

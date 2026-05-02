@@ -1,10 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Heart, ArrowUpRight, Calendar, Clock, MapPin, FileText, ListTodo, AlertTriangle, Plus, Banknote } from 'lucide-react';
+import { Users, Heart, Calendar, Clock, MapPin, ListTodo, AlertTriangle, Plus, Banknote } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useDataStore } from '@/lib/data-store';
+import { useAuthStore } from '@/lib/auth-store';
+import { canAccess } from '@/lib/perms';
 import {
   BarChart,
   Bar,
@@ -21,6 +23,7 @@ export function DashboardPage() {
   const events = useDataStore(s => s.events);
   const activities = useDataStore(s => s.activities);
   const steps = useDataStore(s => s.activitySteps);
+  const user = useAuthStore(s => s.user);
   const totalMembers = members?.length ?? 0;
   const totalMinistries = ministries?.length ?? 0;
   const upcomingEvents = (events ?? [])
@@ -41,6 +44,7 @@ export function DashboardPage() {
     { title: "Atividades", value: inProgressActivitiesCount, icon: ListTodo, color: "bg-amber-500", trend: "Em execução" },
     { title: "Atrasos", value: overdueSteps, icon: AlertTriangle, color: overdueSteps > 0 ? "bg-red-500" : "bg-slate-500", trend: "Tarefas críticas" }
   ];
+  const showFinance = canAccess(user, 'finance');
   return (
     <div className="space-y-10">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
@@ -54,14 +58,16 @@ export function DashboardPage() {
               <Plus className="mr-2 h-4 w-4" /> Novo Membro
             </Button>
           </Link>
-          <Link to="/admin/finance">
-            <Button size="sm" variant="outline" className="border-slate-300">
-              <Banknote className="mr-2 h-4 w-4" /> Registrar Entrada
-            </Button>
-          </Link>
+          {showFinance && (
+            <Link to="/admin/finance">
+              <Button size="sm" variant="outline" className="border-slate-300">
+                <Banknote className="mr-2 h-4 w-4" /> Registrar Entrada
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className={`grid gap-4 sm:grid-cols-2 ${showFinance ? 'lg:grid-cols-4' : 'lg:grid-cols-2'}`}>
         {metrics.map((m, i) => (
           <Card key={i} className="group hover:scale-[1.02] transition-all duration-300 border-slate-200 shadow-soft overflow-hidden">
             <CardContent className="p-6">
@@ -91,7 +97,7 @@ export function DashboardPage() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
-                <Tooltip 
+                <Tooltip
                   cursor={{fill: '#f8fafc'}}
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                 />
