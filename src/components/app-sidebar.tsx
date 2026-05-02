@@ -45,7 +45,8 @@ export function AppSidebar(): JSX.Element {
     toast.info("Logout realizado com sucesso.");
     navigate("/");
   };
-  const isAdmin = user?.role && ['admin', 'pastor', 'staff'].includes(user.role);
+  // Include 'leader' in administrative navigation access
+  const isAdmin = user?.role && ['admin', 'pastor', 'staff', 'leader'].includes(user.role);
   const adminNavItems = [
     { title: "Dashboard", icon: Home, url: "/admin" },
     { title: "Membros", icon: Users, url: "/admin/members" },
@@ -105,7 +106,7 @@ export function AppSidebar(): JSX.Element {
           </SidebarMenu>
         </SidebarGroup>
         <div className="px-6 py-2 text-[10px] text-muted-foreground/40 font-mono tracking-tighter">
-          v1.2.0-stable
+          v1.5.0-local-auth
         </div>
       </SidebarContent>
       <SidebarFooter className="p-4 border-t border-slate-200">

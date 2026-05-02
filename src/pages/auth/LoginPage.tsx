@@ -1,47 +1,82 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Loader2, User, Info } from 'lucide-react';
+import { Sparkles, Loader2, User, Info, Lock } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
+import { useDataStore } from '@/lib/data-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardContent, CardFooter, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+const loginSchema = z.object({
+  email: z.string().email("E-mail inválido"),
+  password: z.string().min(1, "Senha obrigatória"),
+});
 export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const login = useAuthStore(s => s.login);
+  const members = useDataStore(s => s.members);
   const navigate = useNavigate();
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const form = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: 'admin@churchflow.com',
+      password: 'admin123',
+    },
+  });
+  const handleLogin = async (values: z.infer<typeof loginSchema>) => {
     setLoading(true);
-    setTimeout(() => {
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+    // 1. Search in local member store for system access credentials
+    const matchingMember = members.find(m => 
+      m.hasAccess && 
+      m.accessEmail?.toLowerCase() === values.email.toLowerCase() && 
+      m.accessPassword === values.password
+    );
+    if (matchingMember) {
       login({
-        id: 'admin_user',
-        name: 'Pastor João Silva',
+        id: `user_${matchingMember.id}`,
+        name: matchingMember.fullName,
+        email: matchingMember.accessEmail!,
+        role: matchingMember.accessRole!,
+        memberId: matchingMember.id
+      });
+      setLoading(false);
+      toast.success(`Bem-vindo, ${matchingMember.fullName}!`);
+      if (['admin', 'leader'].includes(matchingMember.accessRole!)) {
+        navigate('/admin');
+      } else {
+        navigate('/member/dashboard');
+      }
+      return;
+    }
+    // 2. Fallback for hardcoded admin safety (if seed was cleared or something went wrong)
+    if (values.email === 'admin@churchflow.com' && values.password === 'admin123') {
+      login({
+        id: 'safety_admin',
+        name: 'Administrador do Sistema',
         email: 'admin@churchflow.com',
         role: 'admin',
-        memberId: 'm1' // Joâo Silva is m1 in seeds
+        memberId: 'm1'
       });
       setLoading(false);
-      toast.success('Bem-vindo ao ChurchFlow!');
+      toast.success('Acesso concedido via credenciais de segurança.');
       navigate('/admin');
-    }, 1200);
+      return;
+    }
+    setLoading(false);
+    toast.error('E-mail ou senha incorretos. Verifique suas credenciais.');
   };
   const handleMemberDemo = () => {
-    setLoading(true);
-    setTimeout(() => {
-      login({
-        id: 'user_m2',
-        name: 'Maria Oliveira',
-        email: 'maria@example.com',
-        role: 'member',
-        memberId: 'm2' // Maria is m2 in seeds
-      });
-      setLoading(false);
-      toast.success('Acesso ao Portal do Membro');
-      navigate('/member/dashboard');
-    }, 800);
+    form.setValue('email', 'maria@example.com');
+    form.setValue('password', 'maria123');
+    toast.info("Credenciais de demonstração preenchidas. Clique em entrar.");
   };
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/40 px-4">
@@ -55,65 +90,58 @@ export function LoginPage() {
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight">Portal ChurchFlow</CardTitle>
           <CardDescription>
-            Acesse sua conta administrativa ou portal do membro
+            Acesse o sistema com suas credenciais locais
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="email">E-mail</Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button type="button" className="text-muted-foreground hover:text-primary">
-                        <Info className="h-3 w-3" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="text-xs">Use admin@churchflow.com para testar o painel ADM.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <Input
-                id="email"
-                type="email"
-                placeholder="exemplo@igreja.com"
-                required
-                defaultValue="admin@churchflow.com"
-                className="bg-secondary"
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Senha</Label>
-                <button type="button" className="text-xs text-primary hover:underline">Esqueceu a senha?</button>
-              </div>
-              <Input
-                id="password"
-                type="password"
-                required
-                defaultValue="admin123"
-                className="bg-secondary"
-              />
-            </div>
-            <Button type="submit" className="w-full btn-gradient h-11" disabled={loading}>
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Entrar no Sistema'}
-            </Button>
-          </form>
-          <div className="relative py-2">
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleLogin)} className="space-y-4">
+              <FormField control={form.control} name="email" render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-center justify-between">
+                    <FormLabel>E-mail</FormLabel>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button type="button" className="text-muted-foreground hover:text-primary">
+                            <Info className="h-3 w-3" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent><p className="text-xs">E-mail configurado no cadastro de membro.</p></TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <FormControl><Input placeholder="exemplo@igreja.com" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="password" render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-center justify-between">
+                    <FormLabel>Senha</FormLabel>
+                    <button type="button" className="text-xs text-primary hover:underline">Recuperar acesso</button>
+                  </div>
+                  <FormControl><Input type="password" placeholder="********" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <Button type="submit" className="w-full btn-gradient h-11" disabled={loading}>
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <><Lock className="mr-2 h-4 w-4" /> Entrar no Sistema</>}
+              </Button>
+            </form>
+          </Form>
+          <div className="relative py-6">
             <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-            <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">Ou acesso rápido</span></div>
+            <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">Demo</span></div>
           </div>
           <Button variant="outline" className="w-full h-11 border-dashed" onClick={handleMemberDemo} disabled={loading}>
-            <User className="mr-2 h-4 w-4" /> Entrar como Membro (Demo)
+            <User className="mr-2 h-4 w-4" /> Preencher Líder Demo (Maria)
           </Button>
         </CardContent>
         <CardFooter className="flex flex-col gap-4 text-center border-t pt-6">
           <p className="text-sm text-muted-foreground">
-            Ainda não tem o ChurchFlow? <br/>
-            <button className="text-primary font-medium hover:underline">Falar com um consultor</button>
+            Esqueceu sua senha? <br/>
+            <button className="text-primary font-medium hover:underline">Fale com a secretaria da igreja</button>
           </p>
         </CardFooter>
       </Card>

@@ -7,7 +7,7 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'pastor' | 'staff' | 'member';
+  role: 'admin' | 'pastor' | 'staff' | 'member' | 'leader';
   memberId?: string;
 }
 export interface Position {
@@ -44,6 +44,11 @@ export interface Member {
   memberStatus?: 'ativo' | 'inativo' | 'visitante' | 'transferido';
   notes?: string;
   showBirthdayPublic?: boolean;
+  // System Access Fields
+  hasAccess?: boolean;
+  accessEmail?: string;
+  accessPassword?: string;
+  accessRole?: 'admin' | 'leader' | 'member';
 }
 export interface Ministry {
   id: string;

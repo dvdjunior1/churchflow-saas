@@ -10,7 +10,8 @@ export const AuthGuard = () => {
   }
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isMemberRoute = location.pathname.startsWith('/member');
-  const isPrivileged = ['admin', 'pastor', 'staff'].includes(user.role);
+  // Expanded role list for administrative access
+  const isPrivileged = ['admin', 'pastor', 'staff', 'leader'].includes(user.role);
   const isMember = user.role === 'member';
   // Cross-role protection
   if (isAdminRoute && !isPrivileged) {

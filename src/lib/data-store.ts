@@ -45,21 +45,6 @@ interface DataState {
   seedIfEmpty: () => void;
 }
 const STORAGE_KEY = 'churchflow-data-v1';
-const LEGACY_KEY = 'churchflow-local-storage-v21';
-const migrateLegacyData = () => {
-  if (typeof window === 'undefined') return;
-  try {
-    const legacy = localStorage.getItem(LEGACY_KEY);
-    const current = localStorage.getItem(STORAGE_KEY);
-    if (legacy && !current) {
-      localStorage.setItem(STORAGE_KEY, legacy);
-      // Removed the console.warn to prevent it being flagged as an error by the reporter
-    }
-  } catch (e) {
-    // Silent fail for migration
-  }
-};
-migrateLegacyData();
 export const useDataStore = create<DataState>()(
   persist(
     immer((set) => ({
@@ -88,6 +73,7 @@ export const useDataStore = create<DataState>()(
           positions: [],
           memberStatus: "ativo",
           showBirthdayPublic: false,
+          hasAccess: false,
           ...data,
           id,
           joinedAt: new Date().toISOString(),
@@ -321,7 +307,11 @@ export const useDataStore = create<DataState>()(
                 joinedAt: nowStr,
                 memberStatus: "ativo",
                 city: "São Paulo",
-                state: "SP"
+                state: "SP",
+                hasAccess: true,
+                accessEmail: 'admin@churchflow.com',
+                accessPassword: 'admin123',
+                accessRole: 'admin'
               },
               {
                 id: 'm2',
@@ -335,7 +325,11 @@ export const useDataStore = create<DataState>()(
                 joinedAt: nowStr,
                 memberStatus: "ativo",
                 city: "Rio de Janeiro",
-                state: "RJ"
+                state: "RJ",
+                hasAccess: true,
+                accessEmail: 'maria@example.com',
+                accessPassword: 'maria123',
+                accessRole: 'leader'
               }
             ];
           }
@@ -343,36 +337,6 @@ export const useDataStore = create<DataState>()(
             state.ministries = [
               { id: 'min1', name: "Louvor & Adoração", description: "Equipe de música", leaderId: 'm2' },
               { id: 'min2', name: "Kids", description: "Ministério infantil" }
-            ];
-          }
-          if (state.activities.length === 0) {
-            const a1Id = uuidv4();
-            state.activities = [
-              {
-                id: a1Id,
-                title: "Concerto de Primavera",
-                description: "Evento musical aberto à comunidade.",
-                ministryId: 'min1',
-                responsibleMemberId: 'm2',
-                visibility: 'public',
-                type: 'event',
-                status: 'in_progress',
-                startDate: new Date(Date.now() + 86400000 * 7).toISOString(),
-                createdAt: nowStr,
-                updatedAt: nowStr
-              }
-            ];
-            state.activitySteps = [
-              {
-                id: uuidv4(),
-                activityId: a1Id,
-                title: "Seleção do Repertório",
-                responsibleMemberId: 'm2',
-                dueDate: new Date(Date.now() + 86400000 * 2).toISOString(),
-                status: 'completed',
-                createdAt: nowStr,
-                updatedAt: nowStr
-              }
             ];
           }
           state.lastUpdated = new Date().toISOString();
