@@ -94,7 +94,7 @@ export const useDataStore = create<DataState>()(
       deleteMember: (id) => set((state) => {
         state.members = state.members.filter(m => m.id !== id);
         state.ministryMembers = state.ministryMembers.filter(mm => mm.memberId !== id);
-        state.activitySteps = state.activitySteps.filter(s => s.responsibleMemberId !== id);
+        state.activitySteps = state.activitySteps.filter(s => s.activityId !== id);
         state.lastUpdated = new Date().toISOString();
       }),
       setMinistries: (ministries) => set((state) => {
@@ -281,7 +281,9 @@ export const useDataStore = create<DataState>()(
         state.lastUpdated = new Date().toISOString();
       }),
       seedIfEmpty: () => {
-        const nowStr = new Date().toISOString();
+        const now = new Date();
+        const nowStr = now.toISOString();
+        const birthDateThisMonth = new Date(now.getFullYear(), now.getMonth(), 15).toISOString().split('T')[0];
         set((state) => {
           if (state.positions.length === 0) {
             state.positions = [
@@ -311,7 +313,8 @@ export const useDataStore = create<DataState>()(
                 hasAccess: true,
                 accessEmail: 'admin@churchflow.com',
                 accessPassword: 'admin123',
-                accessRole: 'admin'
+                accessRole: 'admin',
+                showBirthdayPublic: true
               },
               {
                 id: 'm2',
@@ -319,7 +322,7 @@ export const useDataStore = create<DataState>()(
                 email: "maria@example.com",
                 phone: "11888887777",
                 photoUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maria",
-                birthDate: "1992-08-22",
+                birthDate: birthDateThisMonth,
                 role: "Líder de Louvor",
                 positions: ['pos-lider'],
                 joinedAt: nowStr,
@@ -329,14 +332,46 @@ export const useDataStore = create<DataState>()(
                 hasAccess: true,
                 accessEmail: 'maria@example.com',
                 accessPassword: 'maria123',
-                accessRole: 'leader'
+                accessRole: 'leader',
+                showBirthdayPublic: true
               }
             ];
           }
           if (state.ministries.length === 0) {
             state.ministries = [
-              { id: 'min1', name: "Louvor & Adoração", description: "Equipe de música", leaderId: 'm2' },
-              { id: 'min2', name: "Kids", description: "Ministério infantil" }
+              { id: 'min1', name: "Louvor & Adoração", description: "Equipe responsável pela música e louvor em nossa comunidade.", leaderId: 'm2' },
+              { id: 'min2', name: "Kids & Teens", description: "Ensino bíblico criativo para crianças e adolescentes.", leaderId: 'm1' },
+              { id: 'min3', name: "Ação Social", description: "Projetos de ajuda humanitária e suporte à comunidade local." }
+            ];
+          }
+          if (state.activities.length === 0) {
+            state.activities = [
+              {
+                id: 'act1',
+                title: "Mutirão Comunitário",
+                description: "Limpeza e organização da praça central do bairro.",
+                ministryId: 'min3',
+                responsibleMemberId: 'm1',
+                visibility: 'public',
+                type: 'service',
+                status: 'planned',
+                startDate: new Date(now.getTime() + 86400000 * 3).toISOString(),
+                createdAt: nowStr,
+                updatedAt: nowStr
+              },
+              {
+                id: 'act2',
+                title: "Noite de Caldos",
+                description: "Comunhão e arrecadação para o ministério Kids.",
+                ministryId: 'min2',
+                responsibleMemberId: 'm2',
+                visibility: 'public',
+                type: 'social',
+                status: 'planned',
+                startDate: new Date(now.getTime() + 86400000 * 7).toISOString(),
+                createdAt: nowStr,
+                updatedAt: nowStr
+              }
             ];
           }
           state.lastUpdated = new Date().toISOString();
