@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Heart, ArrowUpRight, Calendar, Clock, MapPin, FileText, ListTodo, AlertTriangle } from 'lucide-react';
+import { Users, Heart, ArrowUpRight, Calendar, Clock, MapPin, FileText, ListTodo, AlertTriangle, Plus, Banknote } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +12,8 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
+  Cell
 } from 'recharts';
 export function DashboardPage() {
   const members = useDataStore(s => s.members);
@@ -26,13 +27,8 @@ export function DashboardPage() {
     .filter(e => e?.date && new Date(e.date) >= new Date())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 3);
-  const inProgressActivities = (activities ?? []).filter(a => a?.status === 'in_progress').length;
-  const now = new Date();
-  const overdueSteps = (steps ?? []).filter(s => s?.dueDate && new Date(s.dueDate) < now && s.status !== 'completed').length;
-  const nextActivities = (activities ?? [])
-    .filter(a => a && (a.status === 'planned' || a.status === 'in_progress'))
-    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
-    .slice(0, 3);
+  const inProgressActivitiesCount = (activities ?? []).filter(a => a?.status === 'in_progress').length;
+  const overdueSteps = (steps ?? []).filter(s => s?.dueDate && new Date(s.dueDate) < new Date() && s.status !== 'completed').length;
   const currentMonthName = new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(new Date());
   const capitalizedMonth = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1).replace('.', '');
   const growthData = [
@@ -40,137 +36,107 @@ export function DashboardPage() {
     { month: 'Abr', count: 162 }, { month: 'Mai', count: 180 }, { month: capitalizedMonth, count: totalMembers }
   ];
   const metrics = [
-    {
-      title: "Membros",
-      value: totalMembers,
-      icon: Users,
-      trend: "Total Ativos",
-      color: "text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400"
-    },
-    {
-      title: "Ministérios",
-      value: totalMinistries,
-      icon: Heart,
-      trend: "Atuando",
-      color: "text-rose-600 bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400"
-    },
-    {
-      title: "Em Progresso",
-      value: inProgressActivities,
-      icon: ListTodo,
-      trend: "Atividades Ativas",
-      color: "text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400"
-    },
-    {
-      title: "Atrasos",
-      value: overdueSteps,
-      icon: AlertTriangle,
-      trend: "Tarefas Pendentes",
-      color: overdueSteps > 0 ? "text-red-600 bg-red-100" : "text-slate-600 bg-slate-100"
-    }
+    { title: "Membros", value: totalMembers, icon: Users, color: "bg-blue-500", trend: "Total da base" },
+    { title: "Ministérios", value: totalMinistries, icon: Heart, color: "bg-rose-500", trend: "Equipes ativas" },
+    { title: "Atividades", value: inProgressActivitiesCount, icon: ListTodo, color: "bg-amber-500", trend: "Em execução" },
+    { title: "Atrasos", value: overdueSteps, icon: AlertTriangle, color: overdueSteps > 0 ? "bg-red-500" : "bg-slate-500", trend: "Tarefas críticas" }
   ];
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="space-y-10">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard Geral</h1>
-          <p className="text-muted-foreground">Visão imediata da congregação e produtividade.</p>
+          <h1 className="text-3xl font-black tracking-tight text-foreground">Command Center</h1>
+          <p className="text-muted-foreground font-medium">Gestão em tempo real da ChurchFlow.</p>
         </div>
-        <Link to="/admin/reports">
-          <Button variant="outline">
-            <FileText className="mr-2 h-4 w-4" />
-            Relatórios Completos
-          </Button>
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link to="/admin/members">
+            <Button size="sm" className="btn-gradient shadow-primary">
+              <Plus className="mr-2 h-4 w-4" /> Novo Membro
+            </Button>
+          </Link>
+          <Link to="/admin/finance">
+            <Button size="sm" variant="outline" className="border-slate-300">
+              <Banknote className="mr-2 h-4 w-4" /> Registrar Entrada
+            </Button>
+          </Link>
+        </div>
       </div>
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {metrics.map((m, i) => (
-          <Card key={i} className="hover:shadow-soft transition-all duration-200 border-slate-200">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{m.title}</CardTitle>
-              <div className={`p-2 rounded-lg ${m.color}`}>
-                <m.icon className="h-4 w-4" />
+          <Card key={i} className="group hover:scale-[1.02] transition-all duration-300 border-slate-200 shadow-soft overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <div className={`p-2.5 rounded-xl text-white shadow-lg ${m.color}`}>
+                  <m.icon className="h-5 w-5" />
+                </div>
+                <Badge variant="outline" className="text-[9px] uppercase font-bold tracking-tighter opacity-60">{m.trend}</Badge>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{m.value}</div>
-              <p className="text-xs text-muted-foreground flex items-center mt-2">
-                <ArrowUpRight className="h-3 w-3 mr-1 text-green-500 font-bold" />
-                {m.trend}
-              </p>
+              <div>
+                <p className="text-sm font-bold text-muted-foreground mb-1 uppercase tracking-wider">{m.title}</p>
+                <h3 className="text-4xl font-black tracking-tighter">{m.value}</h3>
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
-      <div className="grid gap-6 lg:grid-cols-7">
-        <Card className="lg:col-span-4 shadow-soft border-slate-200">
+      <div className="grid gap-8 lg:grid-cols-12">
+        <Card className="lg:col-span-8 shadow-soft border-slate-200">
           <CardHeader>
-            <CardTitle>Crescimento Local</CardTitle>
-            <CardDescription>Evolução da membresia nos últimos meses</CardDescription>
+            <CardTitle>Crescimento da Congregação</CardTitle>
+            <CardDescription>Evolução de membros por mês</CardDescription>
           </CardHeader>
           <CardContent className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={growthData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 12}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 12}} />
-                <Tooltip cursor={{fill: 'hsl(var(--primary))', opacity: 0.05}} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
-                <Bar dataKey="count" fill="#3B82F6" radius={[6, 6, 0, 0]} barSize={40} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
+                <Tooltip 
+                  cursor={{fill: '#f8fafc'}}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                />
+                <Bar dataKey="count" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={40}>
+                  {growthData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={index === growthData.length - 1 ? '#2563eb' : '#3b82f6'} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
-        <div className="lg:col-span-3 space-y-6">
+        <div className="lg:col-span-4 space-y-8">
           <Card className="shadow-soft border-slate-200">
-            <CardHeader className="pb-4"><CardTitle className="text-lg">Próximas Atividades</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              {nextActivities.length === 0 ? (
-                <div className="py-8 text-center text-sm text-muted-foreground italic">Nenhuma atividade em andamento.</div>
-              ) : (
-                nextActivities.map((act) => {
-                  const mName = ministries.find(m => m.id === act.ministryId)?.name;
-                  return (
-                    <div key={act.id} className="group p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-soft transition-all">
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className="font-bold text-slate-900 text-sm truncate max-w-[180px]">{act.title}</h4>
-                        <Badge variant="outline" className="text-[9px] uppercase">{act.status}</Badge>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1 opacity-70">
-                        <Badge variant="secondary" className="text-[9px] py-0">{mName || 'Geral'}</Badge>
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                          <Calendar className="h-3 w-3" /> {act.startDate ? new Date(act.startDate).toLocaleDateString() : '---'}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-              <Link to="/admin/activities" className="block w-full">
-                <Button variant="ghost" className="w-full text-xs mt-2">Ver Todas Atividades</Button>
-              </Link>
-            </CardContent>
-          </Card>
-          <Card className="shadow-soft border-slate-200">
-            <CardHeader className="pb-4"><CardTitle className="text-lg">Próximos Eventos</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
+            <CardHeader className="pb-4 flex flex-row items-center justify-between">
+              <CardTitle className="text-lg">Próximos Eventos</CardTitle>
+              <Link to="/admin/events"><Button variant="ghost" size="sm" className="h-7 text-xs">Ver Tudo</Button></Link>
+            </CardHeader>
+            <CardContent className="space-y-4">
               {upcomingEvents.length === 0 ? (
-                <div className="py-8 text-center text-sm text-muted-foreground italic">Nenhum evento agendado.</div>
-              ) : (
-                upcomingEvents.map((event) => (
-                  <div key={event.id} className="group p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-soft transition-all">
-                    <div className="flex justify-between items-start mb-1">
-                      <h4 className="font-bold text-slate-900 text-sm">{event.title}</h4>
-                      <Badge variant="outline" className="text-[9px] uppercase">{event.category}</Badge>
-                    </div>
-                    <div className="flex items-center gap-3 mt-1 opacity-70">
-                      <div className="flex items-center text-[10px] text-muted-foreground"><Clock className="h-3 w-3 mr-1" /> {event.time}</div>
-                      <div className="flex items-center text-[10px] text-muted-foreground"><MapPin className="h-3 w-3 mr-1" /> {event.location}</div>
-                    </div>
+                <p className="text-xs text-muted-foreground italic text-center py-6">Nenhum evento agendado.</p>
+              ) : upcomingEvents.map((event) => (
+                <div key={event.id} className="p-3 rounded-xl border bg-slate-50/50 hover:bg-white hover:shadow-sm transition-all group">
+                  <div className="flex justify-between items-start mb-1">
+                    <h4 className="font-bold text-sm truncate max-w-[150px]">{event.title}</h4>
+                    <Badge variant="secondary" className="text-[9px] uppercase py-0">{event.category}</Badge>
                   </div>
-                ))
-              )}
+                  <div className="flex items-center gap-3 text-[10px] text-muted-foreground font-medium">
+                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {event.time}</span>
+                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {event.location}</span>
+                  </div>
+                </div>
+              ))}
             </CardContent>
           </Card>
+          <div className="p-6 rounded-2xl bg-slate-900 text-white shadow-xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:rotate-12 transition-transform duration-500">
+              <Heart className="h-24 w-24 fill-white" />
+            </div>
+            <h4 className="text-lg font-black mb-1">Dica do Dia</h4>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Manter o cadastro de membros atualizado melhora a comunicação da igreja em 80%.
+            </p>
+            <Button variant="link" className="text-blue-400 p-0 h-auto mt-4 text-xs font-bold">Acessar Secretaria</Button>
+          </div>
         </div>
       </div>
     </div>

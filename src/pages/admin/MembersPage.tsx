@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Filter, UserCircle, Save, Camera, Cake, Briefcase, X, Heart, ExternalLink, ShieldAlert, Key } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Filter, UserCircle, Save, Camera, Cake, Briefcase, X, Heart, ExternalLink, ShieldAlert, Key, BookOpen } from 'lucide-react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -76,7 +76,6 @@ const memberSchema = z.object({
   memberStatus: z.enum(['ativo', 'inativo', 'visitante', 'transferido']),
   notes: z.string().optional(),
   showBirthdayPublic: z.boolean(),
-  // System Access
   hasAccess: z.boolean(),
   accessEmail: z.string().optional(),
   accessPassword: z.string().optional(),
@@ -92,7 +91,6 @@ const memberSchema = z.object({
 });
 type FormValues = z.infer<typeof memberSchema>;
 export function MembersPage() {
-  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
@@ -100,8 +98,6 @@ export function MembersPage() {
   const addMember = useDataStore(s => s.addMember);
   const updateMemberAction = useDataStore(s => s.updateMember);
   const deleteMemberAction = useDataStore(s => s.deleteMember);
-  const activities = useDataStore(s => s.activities);
-  const activitySteps = useDataStore(s => s.activitySteps);
   const allPositions = useDataStore(s => s.positions);
   const ministries = useDataStore(s => s.ministries);
   const ministryMembers = useDataStore(s => s.ministryMembers);
@@ -119,19 +115,9 @@ export function MembersPage() {
       role: 'Membro',
       positions: [],
       photoUrl: '',
-      whatsapp: '',
-      alternatePhone: '',
       gender: 'M',
       maritalStatus: 'solteiro',
-      zipCode: '',
-      street: '',
-      number: '',
-      complement: '',
-      neighborhood: '',
-      city: '',
-      state: '',
       memberStatus: 'ativo',
-      notes: '',
       showBirthdayPublic: false,
       hasAccess: false,
       accessRole: 'member',
@@ -214,11 +200,15 @@ export function MembersPage() {
       toast.error('Ocorreu um erro ao salvar o membro');
     }
   };
-  const filteredMembers = members.filter(m =>
-    m.fullName.toLowerCase().includes(search.toLowerCase()) ||
-    m.email.toLowerCase().includes(search.toLowerCase()) ||
-    (m.memberStatus || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredMembers = members.filter(m => {
+    const searchLower = search.toLowerCase();
+    return (
+      m.fullName.toLowerCase().includes(searchLower) ||
+      m.email.toLowerCase().includes(searchLower) ||
+      (m.memberStatus || '').toLowerCase().includes(searchLower) ||
+      (m.role || '').toLowerCase().includes(searchLower)
+    );
+  });
   const getStatusBadge = (status?: string) => {
     switch (status) {
       case 'ativo': return <Badge className="bg-emerald-500 hover:bg-emerald-600">Ativo</Badge>;
@@ -233,13 +223,7 @@ export function MembersPage() {
       .filter(mm => mm.memberId === memberId)
       .map(mm => {
         const ministry = ministries.find(m => m.id === mm.ministryId);
-        const position = allPositions.find(p => p.id === mm.positionId);
-        return {
-          id: mm.id,
-          ministryName: ministry?.name || 'Desconhecido',
-          role: mm.role,
-          positionName: position?.name || (mm.role === 'leader' ? 'Líder' : 'Membro')
-        };
+        return ministry?.name || 'Desconhecido';
       });
   };
   const accessEnabled = form.watch("hasAccess");
@@ -259,7 +243,7 @@ export function MembersPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nome, e-mail, status..."
+            placeholder="Buscar por nome, e-mail, cargo..."
             className="pl-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -274,7 +258,7 @@ export function MembersPage() {
               <TableHead className="w-[250px]">Membro</TableHead>
               <TableHead>Ministérios</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Acesso</TableHead>
+              <TableHead>Nível de Acesso</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -294,20 +278,21 @@ export function MembersPage() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    {getMemberMinistries(member.id).slice(0, 2).map((min) => (
-                      <Badge key={min.id} variant="secondary" className="text-[9px] py-0">{min.ministryName}</Badge>
+                  <div className="flex flex-wrap gap-1 max-w-[200px]">
+                    {getMemberMinistries(member.id).slice(0, 2).map((name, idx) => (
+                      <Badge key={idx} variant="secondary" className="text-[9px] py-0">{name}</Badge>
                     ))}
+                    {getMemberMinistries(member.id).length > 2 && <span className="text-[10px] text-muted-foreground">...</span>}
                   </div>
                 </TableCell>
                 <TableCell>{getStatusBadge(member.memberStatus)}</TableCell>
                 <TableCell>
                   {member.hasAccess ? (
-                    <Badge className="capitalize bg-primary/10 text-primary border-primary/20" variant="outline">
+                    <Badge className="capitalize bg-blue-50 text-blue-700 border-blue-200" variant="outline">
                       {member.accessRole === 'admin' ? 'Administrador' : member.accessRole === 'leader' ? 'Líder' : 'Membro'}
                     </Badge>
                   ) : (
-                    <span className="text-xs text-slate-300 italic">Nenhum</span>
+                    <span className="text-xs text-slate-300 italic">Sem Acesso</span>
                   )}
                 </TableCell>
                 <TableCell className="text-right">
@@ -331,7 +316,8 @@ export function MembersPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-2xl overflow-y-auto max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle>{editingMember ? 'Editar Perfil' : 'Novo Cadastro'}</DialogTitle>
+            <DialogTitle>{editingMember ? 'Editar Perfil do Membro' : 'Novo Cadastro de Membro'}</DialogTitle>
+            <DialogDescription>Preencha os dados eclesiásticos e de acesso ao sistema.</DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 py-4">
@@ -340,24 +326,85 @@ export function MembersPage() {
                   <AvatarImage src={form.watch('photoUrl')} />
                   <AvatarFallback><UserCircle className="h-12 w-12 text-muted-foreground" /></AvatarFallback>
                 </Avatar>
-                <label className="p-1.5 bg-primary text-primary-foreground rounded-full shadow cursor-pointer">
+                <label className="p-1.5 bg-primary text-primary-foreground rounded-full shadow cursor-pointer hover:scale-110 transition-transform">
                   <Camera className="h-4 w-4" />
                   <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
                 </label>
               </div>
               <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-primary flex items-center gap-2 md:col-span-2">
+                    <UserCircle className="h-4 w-4" /> Dados Pessoais
+                  </h3>
+                  <FormField control={form.control} name="fullName" render={({ field }) => (
+                    <FormItem className="md:col-span-2"><FormLabel>Nome Completo *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="email" render={({ field }) => (
+                    <FormItem><FormLabel>E-mail Pessoal *</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="phone" render={({ field }) => (
+                    <FormItem><FormLabel>Telefone Principal *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="birthDate" render={({ field }) => (
+                    <FormItem><FormLabel>Data de Nascimento *</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="memberStatus" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status de Membro</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          <SelectItem value="ativo">Ativo</SelectItem>
+                          <SelectItem value="inativo">Inativo</SelectItem>
+                          <SelectItem value="visitante">Visitante</SelectItem>
+                          <SelectItem value="transferido">Transferido</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )} />
+                </div>
+                <Separator />
                 <div>
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-primary mb-4">Dados Pessoais</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="fullName" render={({ field }) => (
-                      <FormItem className="md:col-span-2"><FormLabel>Nome Completo *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-primary flex items-center gap-2 mb-4">
+                    <BookOpen className="h-4 w-4" /> Dados Eclesiásticos
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField control={form.control} name="baptismDate" render={({ field }) => (
+                      <FormItem><FormLabel>Data de Batismo</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <FormField control={form.control} name="email" render={({ field }) => (
-                      <FormItem><FormLabel>E-mail Pessoal *</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="phone" render={({ field }) => (
-                      <FormItem><FormLabel>Telefone Principal *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
+                    <FormItem>
+                      <FormLabel>Cargos na Igreja (Geral)</FormLabel>
+                      <ScrollArea className="h-32 p-3 border rounded-lg bg-slate-50/50">
+                        <div className="space-y-2">
+                          {activeChurchPositions.map((pos) => (
+                            <FormField
+                              key={pos.id}
+                              control={form.control}
+                              name="positions"
+                              render={({ field }) => {
+                                return (
+                                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value?.includes(pos.id)}
+                                        onCheckedChange={(checked) => {
+                                          const current = field.value || [];
+                                          return checked
+                                            ? field.onChange([...current, pos.id])
+                                            : field.onChange(current.filter((value) => value !== pos.id));
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <FormLabel className="text-xs font-normal cursor-pointer">{pos.name}</FormLabel>
+                                  </FormItem>
+                                );
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </ScrollArea>
+                      <FormDescription className="text-[10px]">Selecione os cargos atribuídos em escopo geral.</FormDescription>
+                    </FormItem>
                   </div>
                 </div>
                 <Separator />
@@ -370,12 +417,12 @@ export function MembersPage() {
                     <FormField control={form.control} name="hasAccess" render={({ field }) => (
                       <FormItem className="flex items-center space-x-2 space-y-0">
                         <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                        <FormLabel>Habilitar Acesso</FormLabel>
+                        <FormLabel className="text-xs">Habilitar Acesso</FormLabel>
                       </FormItem>
                     )} />
                   </div>
                   {accessEnabled && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
                       <FormField control={form.control} name="accessEmail" render={({ field }) => (
                         <FormItem>
                           <FormLabel>E-mail de Login *</FormLabel>
@@ -397,18 +444,16 @@ export function MembersPage() {
                             <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                             <SelectContent>
                               <SelectItem value="admin">Administrador (Acesso Total)</SelectItem>
-                              <SelectItem value="leader">Líder (Acesso Administrativo Parcial)</SelectItem>
-                              <SelectItem value="member">Membro (Acesso ao Portal do Membro)</SelectItem>
+                              <SelectItem value="leader">Líder (Gestão de Ministérios)</SelectItem>
+                              <SelectItem value="member">Membro (Portal Pessoal)</SelectItem>
                             </SelectContent>
                           </Select>
-                          <FormDescription>Define o que este membro pode visualizar e editar no sistema.</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )} />
                     </div>
                   )}
                 </div>
-                <Separator />
                 <Button type="submit" className="w-full btn-gradient h-12 text-lg">
                   <Save className="mr-2 h-5 w-5" />
                   {editingMember ? 'Salvar Alterações' : 'Cadastrar Membro'}
