@@ -95,7 +95,7 @@ export interface DashboardStats {
   growthData: { month: string; count: number }[];
   upcomingEvents: ChurchEvent[];
 }
-export type ActivityType = 'event' | 'meeting' | 'visit' | 'project' | 'service' | 'other';
+export type ActivityType = 'event' | 'meeting' | 'visit' | 'project' | 'service' | 'social' | 'other';
 export type ActivityStatus = 'planned' | 'in_progress' | 'completed' | 'canceled';
 export type StepStatus = 'pending' | 'in_progress' | 'completed';
 export interface Activity {

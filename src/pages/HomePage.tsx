@@ -1,16 +1,15 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Sparkles, 
-  Users, 
-  Heart, 
-  ArrowRight, 
-  CheckCircle2, 
-  Calendar as CalendarIcon, 
-  PrayingHand, 
-  MapPin, 
-  Clock, 
-  Cake, 
+import {
+  Sparkles,
+  Users,
+  Heart,
+  ArrowRight,
+  CheckCircle2,
+  Calendar as CalendarIcon,
+  MapPin,
+  Clock,
+  Cake,
   HandHeart,
   Church
 } from 'lucide-react';
@@ -92,15 +91,15 @@ export function HomePage() {
         {/* Hero Section */}
         <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden bg-slate-900">
           <div className="absolute inset-0 opacity-20 pointer-events-none">
-             <img 
-              src="https://images.unsplash.com/photo-1438032005730-c779502df39b?auto=format&fit=crop&q=80&w=2071" 
-              alt="Background" 
+             <img
+              src="https://images.unsplash.com/photo-1438032005730-c779502df39b?auto=format&fit=crop&q=80&w=2071"
+              alt="Background"
               className="w-full h-full object-cover"
             />
           </div>
           <div className="absolute inset-0 bg-gradient-church opacity-60 mix-blend-multiply pointer-events-none" />
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-            <motion.h1 
+            <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-display mb-6 text-white"
@@ -108,7 +107,7 @@ export function HomePage() {
               Comunidade Adventista <br />
               <span className="text-church-gold">do Curuçá</span>
             </motion.h1>
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
@@ -136,7 +135,7 @@ export function HomePage() {
               <Badge className="bg-church-green/10 text-church-green hover:bg-church-green/20 border-none px-4 py-1">Nossa História</Badge>
               <h2 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Uma comunidade firmada na Palavra.</h2>
               <p className="text-muted-foreground text-lg leading-relaxed">
-                A Comunidade Adventista do Curuçá é uma família espiritual dedicada a compartilhar a mensagem bíblica de amor e restauração. 
+                A Comunidade Adventista do Curuçá é uma família espiritual dedicada a compartilhar a mensagem bíblica de amor e restauração.
                 Acreditamos na importância da comunhão diária, do estudo da Bíblia e do serviço desinteressado ao próximo.
               </p>
               <ul className="space-y-4">
@@ -153,9 +152,9 @@ export function HomePage() {
               </ul>
             </div>
             <div className="relative rounded-3xl overflow-hidden shadow-2xl aspect-video lg:aspect-square">
-              <img 
-                src="https://images.unsplash.com/photo-1544427928-c49cd049ccfb?auto=format&fit=crop&q=80&w=1974" 
-                alt="Comunidade" 
+              <img
+                src="https://images.unsplash.com/photo-1544427928-c49cd049ccfb?auto=format&fit=crop&q=80&w=1974"
+                alt="Comunidade"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -234,10 +233,10 @@ export function HomePage() {
                   <Card key={member.id} className="min-w-[240px] snap-center rounded-3xl border-none shadow-soft text-center group">
                     <CardContent className="pt-8 pb-6">
                       <div className="relative mx-auto w-20 h-20 mb-4">
-                        <img 
-                          src={member.photoUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.id}`} 
-                          className="w-full h-full rounded-2xl object-cover border-2 border-church-gold group-hover:scale-110 transition-transform" 
-                          alt={member.fullName} 
+                        <img
+                          src={member.photoUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.id}`}
+                          className="w-full h-full rounded-2xl object-cover border-2 border-church-gold group-hover:scale-110 transition-transform"
+                          alt={member.fullName}
                         />
                         <div className="absolute -bottom-2 -right-2 bg-church-gold p-1 rounded-full shadow">
                           <Sparkles className="w-3 h-3 text-white" />
