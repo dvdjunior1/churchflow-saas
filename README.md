@@ -1,6 +1,6 @@
 # Churchflow SaaS
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/dvdjunior1/churchflow-saas)
 
 A production-ready full-stack SaaS application template built on Cloudflare Workers. Features a modern React frontend with Tailwind CSS and shadcn/ui components, powered by a Hono backend with Durable Objects for scalable, stateful entities like users and chat boards.
 
@@ -95,7 +95,7 @@ bun deploy
 
 This builds the frontend assets, bundles the worker, and deploys via Wrangler.
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/dvdjunior1/churchflow-saas)
 
 **Custom Domain**: Update `wrangler.jsonc` and run `wrangler deploy`.
 
