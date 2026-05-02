@@ -41,6 +41,7 @@ const stepSchema = z.object({
 export function ActivitiesPage() {
   const activities = useDataStore(s => s.activities);
   const steps = useDataStore(s => s.activitySteps);
+  const ministryMembers = useDataStore(s => s.ministryMembers);
   const addActivity = useDataStore(s => s.addActivity);
   const updateActivity = useDataStore(s => s.updateActivity);
   const deleteActivity = useDataStore(s => s.deleteActivity);
@@ -57,7 +58,7 @@ export function ActivitiesPage() {
   const [activeActivityId, setActiveActivityId] = useState<string | null>(null);
   const [isAddStepOpen, setIsAddStepOpen] = useState(false);
   const isAdmin = user?.role === 'admin' || user?.role === 'pastor';
-  const managedMinIds = useMemo(() => getManagedMinistryIds(user?.memberId), [user]);
+  const managedMinIds = useMemo(() => getManagedMinistryIds(ministryMembers, user?.memberId), [ministryMembers, user]);
   const filteredActivities = useMemo(() => {
     return activities.filter(a => {
       const matchesSearch = a.title.toLowerCase().includes(search.toLowerCase());

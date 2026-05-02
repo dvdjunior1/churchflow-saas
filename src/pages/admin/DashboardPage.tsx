@@ -20,6 +20,7 @@ import {
 export function DashboardPage() {
   const members = useDataStore(s => s.members);
   const ministries = useDataStore(s => s.ministries);
+  const ministryMembers = useDataStore(s => s.ministryMembers);
   const events = useDataStore(s => s.events);
   const activities = useDataStore(s => s.activities);
   const steps = useDataStore(s => s.activitySteps);
@@ -44,7 +45,7 @@ export function DashboardPage() {
     { title: "Atividades", value: inProgressActivitiesCount, icon: ListTodo, color: "bg-amber-500", trend: "Em execução" },
     { title: "Atrasos", value: overdueSteps, icon: AlertTriangle, color: overdueSteps > 0 ? "bg-red-500" : "bg-slate-500", trend: "Tarefas críticas" }
   ];
-  const showFinance = canAccess(user, 'finance');
+  const showFinance = canAccess(user, ministryMembers, 'finance');
   return (
     <div className="space-y-10">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">

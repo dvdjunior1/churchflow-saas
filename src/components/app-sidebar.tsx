@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuthStore } from "@/lib/auth-store";
+import { useDataStore } from "@/lib/data-store";
 import { canAccess, Resource } from "@/lib/perms";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -42,6 +43,7 @@ export function AppSidebar(): JSX.Element {
   const location = useLocation();
   const logout = useAuthStore(s => s.logout);
   const user = useAuthStore(s => s.user);
+  const ministryMembers = useDataStore(s => s.ministryMembers);
   const handleLogout = () => {
     logout();
     toast.info("Logout realizado com sucesso.");
@@ -63,9 +65,10 @@ export function AppSidebar(): JSX.Element {
     { title: "Agenda", icon: Calendar, url: "/admin/events" },
     { title: "Contribuições", icon: Wallet, url: "/member/donations" },
   ];
-  const navItems = isAdminOrPrivileged 
-    ? allNavItems.filter(item => canAccess(user, item.resource))
+  const navItems = isAdminOrPrivileged
+    ? allNavItems.filter(item => canAccess(user, ministryMembers, item.resource))
     : memberNavItems;
+  const isLeader = ministryMembers.some(mm => mm.memberId === user?.memberId && mm.role === 'leader');
   return (
     <Sidebar collapsible="icon" className="border-r border-slate-200">
       <SidebarHeader className="h-16 flex items-center px-4">
@@ -119,7 +122,7 @@ export function AppSidebar(): JSX.Element {
               <div className="flex flex-col text-left group-data-[collapsible=icon]:hidden overflow-hidden flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium truncate text-foreground">{user?.name}</span>
-                  {user?.role === 'leader' && (
+                  {(user?.role === 'leader' || isLeader) && (
                     <Badge variant="outline" className="h-4 px-1 text-[8px] uppercase border-blue-200 text-blue-600">Líder</Badge>
                   )}
                 </div>

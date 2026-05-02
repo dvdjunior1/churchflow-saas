@@ -44,11 +44,11 @@ export function MinistriesPage() {
   const isAdmin = user?.role === 'admin' || user?.role === 'pastor';
   const visibleMinistries = useMemo(() => {
     if (isAdmin) return ministries;
-    return ministries.filter(min => 
-      min.leaderId === user?.memberId || isLeaderInMin(min.id, user?.memberId)
+    return ministries.filter(min =>
+      min.leaderId === user?.memberId || isLeaderInMin(ministryMembers, min.id, user?.memberId)
     );
-  }, [ministries, isAdmin, user]);
-  const activeMinistryPositions = useMemo(() =>
+  }, [ministries, ministryMembers, isAdmin, user]);
+  const activeMinistryPositions = useMemo(() => 
     allPositions.filter(p => p.active && p.scope === 'ministry'),
   [allPositions]);
   const form = useForm<z.infer<typeof ministrySchema>>({
@@ -161,7 +161,7 @@ export function MinistriesPage() {
         {visibleMinistries.map((min) => {
           const leader = members.find(m => m.id === min.leaderId);
           const count = ministryMembers.filter(mm => mm.ministryId === min.id).length;
-          const canManage = canAccess(user, 'ministries', min.id);
+          const canManage = canAccess(user, ministryMembers, 'ministries', min.id);
           return (
             <Card key={min.id} className="hover:shadow-md transition-all group flex flex-col h-full border-slate-200">
               <CardHeader className="pb-3">
@@ -209,7 +209,7 @@ export function MinistriesPage() {
                 <Button 
                   variant="ghost" 
                   disabled={!canManage}
-                  className="w-full text-xs font-semibold" 
+                  className="w-full text-xs font-semibold"
                   onClick={() => setManagingMinistryId(min.id)}
                 >
                   {canManage ? 'Gerenciar Equipe' : 'Acesso Restrito'}

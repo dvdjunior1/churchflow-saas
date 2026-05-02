@@ -9,7 +9,8 @@ import {
   FileBarChart,
   Table as TableIcon,
   Activity,
-  Heart
+  Heart,
+  LucideIcon
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,25 @@ import {
   Cell
 } from 'recharts';
 import { toast } from 'sonner';
+interface SummaryCardProps {
+  title: string;
+  value: string | number;
+  icon: LucideIcon;
+  trend: string;
+  color: string;
+}
+const SummaryCard = ({ title, value, icon: Icon, trend, color }: SummaryCardProps) => (
+  <Card className={`relative overflow-hidden border-none shadow-soft ${color}`}>
+    <div className="absolute right-0 top-0 p-4 opacity-10"><Icon className="h-16 w-16" /></div>
+    <CardContent className="p-6">
+      <p className="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">{title}</p>
+      <h3 className="text-3xl font-black mb-2">{value}</h3>
+      <p className="text-[10px] flex items-center font-bold">
+        <ArrowUpRight className="h-3 w-3 mr-1" /> {trend}
+      </p>
+    </CardContent>
+  </Card>
+);
 export default function ReportsPage() {
   const members = useDataStore(s => s.members);
   const records = useDataStore(s => s.financialRecords);
@@ -55,18 +75,6 @@ export default function ReportsPage() {
       }
     );
   };
-  const SummaryCard = ({ title, value, icon: Icon, trend, color }: any) => (
-    <Card className={`relative overflow-hidden border-none shadow-soft ${color}`}>
-      <div className="absolute right-0 top-0 p-4 opacity-10"><Icon className="h-16 w-16" /></div>
-      <CardContent className="p-6">
-        <p className="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">{title}</p>
-        <h3 className="text-3xl font-black mb-2">{value}</h3>
-        <p className="text-[10px] flex items-center font-bold">
-          <ArrowUpRight className="h-3 w-3 mr-1" /> {trend}
-        </p>
-      </CardContent>
-    </Card>
-  );
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="py-8 md:py-10 lg:py-12">
@@ -80,33 +88,33 @@ export default function ReportsPage() {
           </Button>
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-10">
-          <SummaryCard 
-            title="Membros Totais" 
-            value={members.length} 
-            icon={Users} 
-            trend="12% este mês" 
-            color="bg-blue-600 text-white" 
+          <SummaryCard
+            title="Membros Totais"
+            value={members.length}
+            icon={Users}
+            trend="12% este mês"
+            color="bg-blue-600 text-white"
           />
-          <SummaryCard 
-            title="Receita Consolidada" 
-            value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalRevenue)} 
-            icon={Banknote} 
-            trend="Meta: 90%" 
-            color="bg-emerald-600 text-white" 
+          <SummaryCard
+            title="Receita Consolidada"
+            value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalRevenue)}
+            icon={Banknote}
+            trend="Meta: 90%"
+            color="bg-emerald-600 text-white"
           />
-          <SummaryCard 
-            title="Ministérios Ativos" 
-            value={ministries.length} 
-            icon={Heart} 
-            trend="Plena atividade" 
-            color="bg-rose-600 text-white" 
+          <SummaryCard
+            title="Ministérios Ativos"
+            value={ministries.length}
+            icon={Heart}
+            trend="Plena atividade"
+            color="bg-rose-600 text-white"
           />
-          <SummaryCard 
-            title="Atividades" 
-            value={inProgressActs} 
-            icon={Activity} 
-            trend="Em execução" 
-            color="bg-slate-800 text-white" 
+          <SummaryCard
+            title="Atividades"
+            value={inProgressActs}
+            icon={Activity}
+            trend="Em execução"
+            color="bg-slate-800 text-white"
           />
         </div>
         <Tabs defaultValue="overview" className="space-y-8">
@@ -127,7 +135,7 @@ export default function ReportsPage() {
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                       <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
                       <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                      <Tooltip 
+                      <Tooltip
                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                         cursor={{fill: '#f8fafc'}}
                       />
